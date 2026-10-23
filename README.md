@@ -15,6 +15,7 @@
         alt="LightlyStudio logo"
       />
     </picture>
+    
   </a>
 </p>
 <p align="center"><strong>Curate, Annotate, and Manage Your Data in LightlyStudio.</strong></p>
