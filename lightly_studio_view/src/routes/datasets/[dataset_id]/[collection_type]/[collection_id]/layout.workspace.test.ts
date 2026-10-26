@@ -78,6 +78,9 @@ vi.mock('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte', async () => 
 vi.mock('$lib/components/Header/MenuDialogHost.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
+vi.mock('$lib/components/MediaDropZone/MediaDropZone.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
 vi.mock('$lib/components/QueryControl/QueryControl.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));

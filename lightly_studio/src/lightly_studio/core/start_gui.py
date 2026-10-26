@@ -22,6 +22,7 @@ def start_gui(
     host: str | None = None,
     port: int | None = None,
     open_browser: bool = True,
+    allow_empty: bool = False,
 ) -> Server:
     """Launch the web interface for the loaded dataset.
 
@@ -31,11 +32,13 @@ def start_gui(
         host: Host to bind the server to. Falls back to LIGHTLY_STUDIO_HOST env var.
         port: Port to bind the server to. Falls back to LIGHTLY_STUDIO_PORT env var.
         open_browser: Whether to open the URL in a browser once the server is ready.
+        allow_empty: Whether to start on a dataset without samples, so that media can be
+            added through the GUI. A dataset must still exist.
 
     Returns:
         The Server instance.
     """
-    _validate_has_samples()
+    _validate_has_samples(allow_empty=allow_empty)
 
     server = Server(host=host, port=port)
     uvicorn_server = server.create_uvicorn_server()
@@ -149,11 +152,15 @@ def _run_uvicorn_server(uvicorn_server: uvicorn.Server) -> None:
     uvicorn_server.run()
 
 
-def _validate_has_samples() -> None:
+def _validate_has_samples(allow_empty: bool = False) -> None:
     """Validate that there are samples in the database before starting GUI.
 
+    Args:
+        allow_empty: Whether a dataset without samples passes the check.
+
     Raises:
-        ValueError: If no datasets are found or if no samples exist in any dataset.
+        ValueError: If no datasets are found, or if no samples exist in the first dataset
+            and allow_empty is False.
     """
     session = db_manager.persistent_session()
 
@@ -166,6 +173,9 @@ def _validate_has_samples() -> None:
             "(e.g., add_images_from_path(), add_samples_from_yolo(), etc.) "
             "before starting the GUI."
         )
+
+    if allow_empty:
+        return
 
     # Check if there are any samples in the first dataset
     first_dataset = datasets[0]

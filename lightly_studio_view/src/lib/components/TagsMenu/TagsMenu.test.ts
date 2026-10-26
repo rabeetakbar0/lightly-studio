@@ -40,6 +40,15 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
     };
 });
 
+vi.mock('$lib/hooks/useDeleteImages/useDeleteImages.svelte', () => ({
+    useDeleteImages: () => ({
+        mutation: { isPending: false },
+        deleteByTag: vi.fn(),
+        deleteAll: vi.fn(),
+        deleteSamples: vi.fn()
+    })
+}));
+
 vi.mock('$lib/hooks/useTags/useTags.js', () => ({
     useTags: vi.fn(() => ({
         tags: readable(mocks.tags),

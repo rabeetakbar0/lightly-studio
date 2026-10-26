@@ -119,6 +119,8 @@ ifeq ($(OS),Windows_NT)
 	@powershell -Command "Copy-Item -Path ..\lightly_studio_view\src\lib\version.json -Destination src\lightly_studio\dist_lightly_studio_view_app\version-info.json -Force"
 else
 	$(MAKE) -C ../lightly_studio_view build-dirty
+	# `cp -r` into an existing folder nests the build inside it, so start from a clean folder.
+	rm -rf src/lightly_studio/dist_lightly_studio_view_app
 	cp -r ../lightly_studio_view/build/ src/lightly_studio/dist_lightly_studio_view_app
 	cp ../lightly_studio_view/src/lib/version.json src/lightly_studio/dist_lightly_studio_view_app/version-info.json
 endif
@@ -337,6 +339,20 @@ export-version:
 start-example:
 	@echo "Starting server..."
 	uv run src/lightly_studio/examples/example.py
+
+# Starts the GUI on an empty, persistent dataset; media is added by drag and drop.
+# `python` is passed explicitly: with a bare script path, uv discovers the project from the
+# script's folder, lands on the workspace root, and resolves the CUDA torch instead of `cpu`.
+.PHONY: start-pipeline
+start-pipeline:
+	@echo "Starting LightlyStudio on the pipeline dataset..."
+	uv run python ../projects/start_studio.py
+
+# Same, after deleting the pipeline database and every uploaded file.
+.PHONY: start-pipeline-clean
+start-pipeline-clean:
+	@echo "Resetting the pipeline dataset and starting LightlyStudio..."
+	uv run python ../projects/start_studio.py --reset
 
 # Runs the MCAP sequence-indexing example from S3: uploads FLOCI_MCAP_FILES (see top of
 # this Makefile) to the local Floci S3 emulator, then points the example at the

@@ -1,6 +1,6 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
-    import { MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
+    import { ImageOff, MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
     import type { TagView } from '$lib/services/types';
     import { Button } from '$lib/components';
 
@@ -17,7 +17,8 @@
         onOpenChange,
         onCloseAutoFocus,
         onRename,
-        onDelete
+        onDelete,
+        onDeleteWithImages
     }: {
         tag: TagView;
         open: boolean;
@@ -27,6 +28,8 @@
         onCloseAutoFocus: (event: Event) => void;
         onRename: (tag: TagView, event: MouseEvent) => void;
         onDelete: (tag: TagView, event: MouseEvent) => void;
+        /** Deletes the tag together with every image that carries it. */
+        onDeleteWithImages?: (tag: TagView, event: MouseEvent) => void;
     } = $props();
 </script>
 
@@ -43,7 +46,7 @@
         <MoreHorizontal />
     </Popover.Trigger>
     <Popover.Content
-        class="w-40 p-1"
+        class="w-48 p-1"
         align="end"
         {onCloseAutoFocus}
         onclick={(event: MouseEvent) => {
@@ -79,5 +82,21 @@
         >
             {deletingTagId === tag.tag_id ? 'Deleting...' : 'Delete tag'}
         </Button>
+        {#if onDeleteWithImages}
+            <Button
+                icon={ImageOff}
+                buttonProps={{
+                    type: 'button',
+                    class: destructiveActionButtonClass,
+                    'data-testid': `delete-tag-images-${tag.tag_id}`,
+                    disabled: deletingTagId !== null || renamingTagId !== null,
+                    onclick: (event: MouseEvent) => {
+                        onDeleteWithImages(tag, event);
+                    }
+                }}
+            >
+                Delete tag and images
+            </Button>
+        {/if}
     </Popover.Content>
 </Popover.Root>

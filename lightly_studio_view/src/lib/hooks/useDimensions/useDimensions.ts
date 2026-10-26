@@ -42,10 +42,23 @@ const loadInitialDimensionBounds = async (collection_id: string) => {
         return;
     }
 
-    if (dimensionBoundsData) {
+    // A collection without images has no bounds; the API then returns an empty object.
+    if (hasBounds(dimensionBoundsData)) {
         dimensionsBounds.set(dimensionBoundsData);
         dimensionsValues.set(dimensionBoundsData);
     }
+};
+
+const hasBounds = (bounds: DimensionBounds | undefined): bounds is DimensionBounds =>
+    bounds != null &&
+    [bounds.min_width, bounds.max_width, bounds.min_height, bounds.max_height].every(
+        (value) => typeof value === 'number' && Number.isFinite(value)
+    );
+
+/** Reloads the bounds of a collection, for example after images were added to it. */
+export const reloadDimensionBounds = async (collection_id: string) => {
+    lastCollectionId.set(null);
+    await loadInitialDimensionBounds(collection_id);
 };
 
 const bindCollectionLoader = <T>(source: Readable<T>, collectionId: CollectionIdInput) => {

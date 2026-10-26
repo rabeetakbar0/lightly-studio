@@ -72,7 +72,8 @@ dependencies = [
 ]
 
 [tool.uv]
-default-groups = ["dev", "cpu"]
+# `pipeline` holds what the fork's own operators in ../projects need.
+default-groups = ["dev", "cpu", "pipeline"]
 
 [tool.uv.sources]
 lightly-studio-serve = { workspace = true }
@@ -117,6 +118,12 @@ dev = [
 # lock a second resolution with the CUDA build from PyPI. See CONTRIBUTING.md.
 cpu = ["torch", "torchvision"]
 gpu = ["torch", "torchvision"]
+# ONNX inference for the detection models in ../projects/models.
+pipeline = [
+    # 1.19 is the last onnxruntime with Python 3.9 wheels.
+    "onnxruntime>=1.19,<1.20; python_version < '3.10'",
+    "onnxruntime>=1.20; python_version >= '3.10'",
+]
 
 docs = [
     "mkdocs>=1.5.0",

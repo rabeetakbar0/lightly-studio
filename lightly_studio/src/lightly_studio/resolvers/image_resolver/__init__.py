@@ -8,6 +8,9 @@ from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_t
 )
 from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
+from lightly_studio.resolvers.image_resolver.delete_many_with_dependents import (
+    delete_many_with_dependents,
+)
 from lightly_studio.resolvers.image_resolver.get_adjacent_images import get_adjacent_images
 from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
     get_all_by_collection_id,
@@ -38,6 +41,7 @@ __all__ = [
     "count_image_annotations_by_sample_tags",
     "create_many",
     "delete",
+    "delete_many_with_dependents",
     "get_adjacent_images",
     "get_all_by_collection_id",
     "get_by_id",

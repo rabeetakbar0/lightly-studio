@@ -1,0 +1,8 @@
+# The fork's own scripts and operators follow the backend's rules.
+extend = "../lightly_studio/ruff.toml"
+
+[lint.per-file-ignores]
+"__init__.py" = ["D104"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]
+# A launcher script: imports follow the sys.path tweak, and the top-level code is the point.
+"start_studio.py" = ["E402"]

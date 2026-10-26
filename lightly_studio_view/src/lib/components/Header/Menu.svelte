@@ -7,6 +7,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useDeleteAllImagesDialog } from '$lib/hooks/useDeleteAllImagesDialog/useDeleteAllImagesDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
@@ -17,7 +18,8 @@
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
         Menu as MenuIcon,
-        Compass as CompassIcon
+        Compass as CompassIcon,
+        Trash2 as TrashIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -53,6 +55,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { openDeleteAllImagesDialog } = useDeleteAllImagesDialog();
 
     type MenuAction = SelectItem & { onSelect: () => void };
 
@@ -135,6 +138,14 @@
             icon: CompassIcon,
             testId: 'menu-show-tour',
             onSelect: () => onShowTour?.()
+        });
+
+        addAction(items, isImages && isEditor && collection.sample_type == 'image', {
+            value: 'menu-delete-all-images',
+            label: 'Delete all images',
+            icon: TrashIcon,
+            testId: 'menu-delete-all-images',
+            onSelect: openDeleteAllImagesDialog
         });
 
         return items;

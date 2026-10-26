@@ -41,6 +41,8 @@ from lightly_studio.api.routes.api import (
     image,
     image_embedding,
     mcap_sequence,
+    media_delete,
+    media_upload,
     metadata,
     operator,
     sample,
@@ -164,6 +166,8 @@ api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
 api_router.include_router(mcap_sequence.mcap_sequence_router)
+api_router.include_router(media_upload.media_upload_router)
+api_router.include_router(media_delete.media_delete_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)
 

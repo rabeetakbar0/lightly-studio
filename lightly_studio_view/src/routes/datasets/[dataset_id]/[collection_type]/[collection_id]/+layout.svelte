@@ -22,6 +22,7 @@
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
+    import MediaDropZone from '$lib/components/MediaDropZone/MediaDropZone.svelte';
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -742,6 +743,9 @@
                 </div>
                 {#if isCollectionGrid}
                     <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                {/if}
+                {#if isCollectionGrid && isImages}
+                    <MediaDropZone {collectionId} isEmpty={collection?.total_sample_count === 0} />
                 {/if}
             {/snippet}
 

@@ -7,6 +7,7 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { useDeleteAllImagesDialog } from '$lib/hooks/useDeleteAllImagesDialog/useDeleteAllImagesDialog';
 
     let {
         isImages = false,
@@ -36,6 +37,7 @@
     const { isExportDialogOpen } = useExportDialog();
     const { isOperatorsDialogOpen } = useOperatorsDialog();
     const { isSettingsDialogOpen } = useSettingsDialog();
+    const { isDeleteAllImagesDialogOpen } = useDeleteAllImagesDialog();
 
     $effect(() => {
         if (!hasSelection || $datasetSplitCollectionId !== collection.collection_id) {
@@ -75,6 +77,12 @@
 {#if hasOperatorsMenuLoaded}
     {#await import('$lib/components/Operator/OperatorsMenu.svelte') then { default: OperatorsMenu }}
         <OperatorsMenu />
+    {/await}
+{/if}
+
+{#if isImageCollection && $isDeleteAllImagesDialogOpen}
+    {#await import('$lib/components/DeleteAllImagesDialog/DeleteAllImagesDialog.svelte') then { default: DeleteAllImagesDialog }}
+        <DeleteAllImagesDialog {collection} />
     {/await}
 {/if}
 

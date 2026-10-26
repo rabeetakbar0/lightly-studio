@@ -15,6 +15,8 @@
     import TagAssignInput from './TagAssignInput.svelte';
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
+    import ConfirmDeleteDialog from '$lib/components/ConfirmDeleteDialog/ConfirmDeleteDialog.svelte';
+    import { useDeleteImages } from '$lib/hooks/useDeleteImages/useDeleteImages.svelte';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
@@ -65,6 +67,16 @@
     let editingTagId = $state<string | null>(null);
     let renamingTagId = $state<string | null>(null);
     let openActionsTagId = $state<string | null>(null);
+    let tagToPurge = $state<TagView | null>(null);
+    const { mutation: purgeMutation, deleteByTag } = useDeleteImages(() => ({
+        collectionId: collection_id,
+        onDeleted: () => (tagToPurge = null)
+    }));
+    const openPurge = (tag: TagView, event: MouseEvent) => {
+        event.stopPropagation();
+        openActionsTagId = null;
+        tagToPurge = tag;
+    };
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
 
     // Tag by filter when the selection is still an unmodified select-all (do not send
@@ -251,6 +263,7 @@
                             }}
                             onRename={openRename}
                             onDelete={handleDeleteTag}
+                            onDeleteWithImages={isAnnotationGrid ? undefined : openPurge}
                         />
                     {/if}
                 </div>
@@ -269,3 +282,14 @@
         {/if}
     </div>
 </Segment>
+
+{#if tagToPurge}
+    <ConfirmDeleteDialog
+        title="Delete tag and its images?"
+        description={`Every image carrying "${tagToPurge.name}" is removed with its annotations and uploaded files, and the tag itself is deleted.`}
+        confirmLabel="Delete tag and images"
+        isPending={purgeMutation.isPending}
+        onConfirm={() => tagToPurge && deleteByTag(tagToPurge.tag_id)}
+        onCancel={() => (tagToPurge = null)}
+    />
+{/if}

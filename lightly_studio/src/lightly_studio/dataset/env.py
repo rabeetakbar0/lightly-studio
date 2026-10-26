@@ -14,6 +14,10 @@ LIGHTLY_STUDIO_MODEL_CACHE_DIR: Path = env.path(
     "LIGHTLY_STUDIO_MODEL_CACHE_DIR", Path.home() / ".cache" / "lightly-studio"
 )
 LIGHTLY_STUDIO_PROTOCOL: str = env.str("LIGHTLY_STUDIO_PROTOCOL", "http")
+# Files uploaded through the GUI are stored here, in one subfolder per collection.
+LIGHTLY_STUDIO_UPLOAD_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_UPLOAD_DIR", Path.cwd() / "lightly_studio_uploads"
+)
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
 LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)

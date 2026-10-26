@@ -19,6 +19,7 @@ SKILLS_BY_PATH = [
     ("lightly_studio/src/lightly_studio/", (".py",), ["python-guide", "backend-guide"]),
     ("lightly_studio/", (".py",), ["python-guide"]),
     ("lightly_studio_serve/", (".py",), ["python-guide"]),
+    ("projects/", (".py",), ["python-guide", "fork-guide"]),
     ("lightly_studio_view/", (".ts", ".svelte"), ["frontend-guide"]),
     ("CHANGELOG.md", (".md",), ["changelog"]),
     ("lightly_studio_serve/CHANGELOG.md", (".md",), ["changelog"]),

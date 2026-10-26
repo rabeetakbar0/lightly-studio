@@ -31,3 +31,10 @@ dataset_examples_studio
 coverage.json
 
 .local.gitignore
+
+# Media uploaded through the GUI (LIGHTLY_STUDIO_UPLOAD_DIR), wherever the server was started.
+lightly_studio_uploads/
+projects/uploads/
+
+# Crash logs of the frontend client generator.
+lightly_studio_view/openapi-ts-error-*.log

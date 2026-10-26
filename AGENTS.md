@@ -12,6 +12,7 @@ Load the skill that matches the path you edit:
 - `lightly_studio/src/lightly_studio/**` → also [backend-guide](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel.
 - `lightly_studio_view/**` (`.ts`, `.svelte`) → [frontend-guide](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit.
 - `CHANGELOG.md`, `lightly_studio_serve/CHANGELOG.md` → [changelog](./.agents/skills/changelog/SKILL.md): changelog entries.
+- `projects/**` → [fork-guide](./.agents/skills/fork-guide/SKILL.md): this fork's launcher, models folder and operators; also [python-guide](./.agents/skills/python-guide/SKILL.md).
 
 When the task matches, also load:
 

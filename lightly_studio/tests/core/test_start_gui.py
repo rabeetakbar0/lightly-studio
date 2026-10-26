@@ -232,6 +232,31 @@ def test_start_gui__empty_datasets(
         start_gui(open_browser=False)
 
 
+def test_start_gui__empty_datasets_allowed(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """An empty dataset starts when allow_empty is set, so media can be added in the GUI."""
+    session = db_manager.persistent_session()
+    collection_resolver.create(
+        session=session,
+        collection=CollectionCreate(name="empty_dataset_direct", sample_type=SampleType.IMAGE),
+    )
+    run_server = mocker.patch.object(target=start_gui_module, attribute="_run_uvicorn_server")
+
+    start_gui(open_browser=False, allow_empty=True)
+
+    run_server.assert_called_once()
+
+
+def test_start_gui__no_datasets_with_allow_empty(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """allow_empty still requires a dataset to exist."""
+    with pytest.raises(ValueError, match="No datasets found"):
+        start_gui(open_browser=False, allow_empty=True)
+
+
 def test_start_gui_background(
     mocker: MockerFixture,
     patch_gui_background_state: None,  # noqa: ARG001

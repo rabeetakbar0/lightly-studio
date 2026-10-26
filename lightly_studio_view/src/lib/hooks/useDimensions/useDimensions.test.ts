@@ -33,6 +33,18 @@ describe('useDimensions', () => {
         });
     });
 
+    it('keeps bounds empty for a collection without images', async () => {
+        loadDimensionBoundsMock.mockResolvedValue({ data: {} });
+        const { useDimensions } = await import('./useDimensions');
+        const { dimensionsBounds, dimensionsValues } = useDimensions('empty-collection');
+
+        await waitFor(() => expect(loadDimensionBoundsMock).toHaveBeenCalled());
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(dimensionsBounds)).toBeNull();
+        expect(get(dimensionsValues)).toBeNull();
+    });
+
     it('does not call loadInitialDimensionBounds when collection_id is not provided', async () => {
         const { useDimensions } = await import('./useDimensions');
         useDimensions();
