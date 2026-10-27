@@ -6,7 +6,8 @@ export type ExportType =
     | 'segmentation'
     | 'captions'
     | 'youtube_vis_segmentation'
-    | 'semantic_segmentations';
+    | 'semantic_segmentations'
+    | 'prepare_coco';
 
 interface ExportOption {
     value: ExportType;
@@ -20,7 +21,8 @@ const imageExportOptions: ExportOption[] = [
     { value: 'object_detections_yolo', label: 'Image Object Detections (YOLO)' },
     { value: 'segmentation', label: 'Image Segmentation Mask (COCO)' },
     { value: 'semantic_segmentations', label: 'Image Segmentation Mask (PASCAL VOC)' },
-    { value: 'captions', label: 'Image Captions' }
+    { value: 'captions', label: 'Image Captions' },
+    { value: 'prepare_coco', label: 'Prepare COCO dataset (training)' }
 ];
 
 const youtubeVisOption: ExportOption = {

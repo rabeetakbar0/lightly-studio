@@ -20,12 +20,21 @@ backend and frontend modules.
   `<name>_prediction`). Tests in `projects/tests`, lint config in `projects/ruff.toml`.
 - `projects/uploads/` and `projects/lightly_studio_pipeline.db`: data added through the GUI.
   Both gitignored. `LIGHTLY_STUDIO_UPLOAD_DIR` is set by the launcher before the import.
-- Backend fork modules: `lightly_studio/src/lightly_studio/upload/` (frame selection, frame
+- `projects/datasets/`: COCO datasets prepared from the GUI (Export → "Prepare COCO dataset"),
+  one folder each: `train2017/`, `val2017/`, `annotations/instances_*.json`, `dataset.json`
+  manifest, `README.md`. Images are hard links with bare file names; categories are 1-based.
+  `LIGHTLY_STUDIO_DATASETS_DIR` points here (set by the launcher). Gitignored.
+- Backend fork modules: `lightly_studio/src/lightly_studio/pipeline_datasets/` (`coco_dataset`:
+  write, merge, list, delete folders; `service`: export from a collection, preview back into
+  Studio as dataset `preview:<name>`) with routes `api/routes/api/pipeline_datasets.py`.
+  The landing page skips `preview:` datasets. `lightly_studio/src/lightly_studio/upload/` (frame selection, frame
   extraction, upload and delete services) and routes `api/routes/api/media_upload.py`,
   `media_delete.py`. `resolvers/image_resolver/delete_many_with_dependents.py` is the ordered
   DuckDB cascade for image samples.
 - Frontend fork modules: `lib/components/MediaDropZone`, `ConfirmDeleteDialog`,
-  `DeleteAllImagesDialog`, hooks `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`.
+  `DeleteAllImagesDialog`, `TrainPanel` (right side panel tab "Train": list, preview, merge,
+  delete datasets; training itself is not wired yet), `ExportSamples/PrepareDatasetTab`; hooks
+  `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`, `usePipelineDatasets`.
 
 ## Running
 

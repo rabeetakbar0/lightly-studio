@@ -784,6 +784,10 @@
                                         {collectionId}
                                     />
                                 {/await}
+                            {:else if $activePanel === 'train' && isImages}
+                                {#await import('$lib/components/TrainPanel/TrainPanel.svelte') then { default: TrainPanel }}
+                                    <TrainPanel onClose={() => setActivePanel('none')} />
+                                {/await}
                             {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                                 {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                                     <!-- PlotPanel captures collectionId at mount; remount it when

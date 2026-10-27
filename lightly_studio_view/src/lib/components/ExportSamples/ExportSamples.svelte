@@ -9,6 +9,7 @@
     import { useExportTracking } from './useExportTracking/useExportTracking';
     import SamplesTab from './SamplesTab/SamplesTab.svelte';
     import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
+    import PrepareDatasetTab from './PrepareDatasetTab/PrepareDatasetTab.svelte';
     import CaptionsTab from './CaptionsTab/CaptionsTab.svelte';
     import YoutubeVisTab from './YoutubeVisTab/YoutubeVisTab.svelte';
     import { getDefaultExportType, getExportOptions, type ExportType } from './exportOptions';
@@ -176,6 +177,13 @@
                         <CaptionsTab
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
+                        />
+                    </Tabs.Content>
+
+                    <Tabs.Content value="prepare_coco" class="pt-0">
+                        <PrepareDatasetTab
+                            {annotationSources}
+                            bind:selectedAnnotationCollectionId
                         />
                     </Tabs.Content>
 

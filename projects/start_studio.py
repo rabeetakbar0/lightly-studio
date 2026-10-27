@@ -22,6 +22,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 # Environment settings are read when lightly_studio is imported, so they come first.
 os.environ.setdefault("LIGHTLY_STUDIO_ANALYTICS_ENABLED", "False")  # Never share usage data.
 os.environ.setdefault("LIGHTLY_STUDIO_UPLOAD_DIR", str(PROJECT_DIR / "uploads"))
+os.environ.setdefault("LIGHTLY_STUDIO_DATASETS_DIR", str(PROJECT_DIR / "datasets"))
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager

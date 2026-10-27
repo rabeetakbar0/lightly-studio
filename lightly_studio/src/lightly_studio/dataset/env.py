@@ -18,6 +18,10 @@ LIGHTLY_STUDIO_PROTOCOL: str = env.str("LIGHTLY_STUDIO_PROTOCOL", "http")
 LIGHTLY_STUDIO_UPLOAD_DIR: Path = env.path(
     "LIGHTLY_STUDIO_UPLOAD_DIR", Path.cwd() / "lightly_studio_uploads"
 )
+# COCO datasets prepared from the GUI are written here, one folder per dataset.
+LIGHTLY_STUDIO_DATASETS_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_DATASETS_DIR", Path.cwd() / "lightly_studio_datasets"
+)
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
 LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)

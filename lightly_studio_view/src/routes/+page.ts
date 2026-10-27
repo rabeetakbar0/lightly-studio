@@ -9,6 +9,8 @@ export const load = async () => {
     }
     const mostRecentRootDataset = data
         .filter((collection) => collection.parent_collection_id == null)
+        // Datasets loaded to preview a prepared dataset never become the landing page.
+        .filter((collection) => !collection.name.startsWith('preview:'))
         .toSorted(
             (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
         )[0];

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Drop images or videos onto the image grid to ingest them. Videos are turned into frames: the start and end are sampled densely, the middle sparsely, with a cap per video. Each upload can carry a tag; a video's frames are tagged with the video name by default.
 - Delete every image of a tag from the tag's menu, or every image of the collection from the header menu, to start over without restarting.
+- Export → "Prepare COCO dataset" writes the images in the current view and their boxes as a training-ready COCO folder with train and validation splits, named by you.
+- The new Train panel on the right lists the prepared datasets, previews any of them in Studio in a new tab, merges two into a new dataset, and deletes them.
 - Python SDK: `start_gui(allow_empty=True)` starts the GUI on a dataset that has no images yet.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 
