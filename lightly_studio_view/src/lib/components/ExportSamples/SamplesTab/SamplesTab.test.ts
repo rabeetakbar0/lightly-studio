@@ -69,12 +69,4 @@ describe('SamplesTab', () => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
     });
-
-    it('calls onDownloadClick when the download button is clicked', async () => {
-        mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
-        const onDownloadClick = vi.fn();
-        render(SamplesTab, { props: { onDownloadClick } });
-        await fireEvent.click(screen.getByTestId('submit-button-samples'));
-        expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
 });

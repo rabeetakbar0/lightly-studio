@@ -3,7 +3,6 @@
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';
-    import { usePostHog } from '$lib/hooks';
 
     interface Props {
         collectionId: string;
@@ -26,7 +25,6 @@
     const { selectedColorByType, setSelectedColorByType, clearSelectedColorByType } = $derived.by(
         () => usePlotColorByType(collectionId)
     );
-    const { trackEvent } = usePostHog();
 
     const colorableFields = $derived(
         ($metadataInfo ?? []).filter((field) => supportedTypes.has(field.type))
@@ -74,22 +72,10 @@
         return 'Color by';
     });
 
-    const handleOpenChange = (open: boolean) => {
-        if (!open) return;
-        trackEvent('color_by_opened', {
-            collection_id: collectionId,
-            current_color_by: $selectedColorByType
-        });
-    };
-
     const handleValueChange = (value: string) => {
         if (value === '' || value === NO_COLOR_BY) {
             clearSelectedColorByType();
             onSelectedKeyChange(null);
-            trackEvent('embedding_color_by_changed', {
-                collection_id: collectionId,
-                color_by_type: null
-            });
             return;
         }
 
@@ -103,10 +89,6 @@
             setSelectedColorByType(option.type);
             onSelectedKeyChange(null);
         }
-        trackEvent('embedding_color_by_changed', {
-            collection_id: collectionId,
-            color_by_type: option.type
-        });
     };
 </script>
 
@@ -116,7 +98,6 @@
     value={selectValue}
     allowDeselect
     onValueChange={handleValueChange}
-    onOpenChange={handleOpenChange}
     size="xs"
     class="w-48 min-w-0"
     testId="plot-color-by-button"

@@ -57,7 +57,7 @@ it.each(['classification', 'object_detection', 'segmentation_mask'] as const)(
         });
         current.collectionId = 'another-collection';
         await mocks.undo.mock.lastCall![0].execute();
-        expect(mocks.remove).toHaveBeenLastCalledWith('copy', annotation_type, 'images');
+        expect(mocks.remove).toHaveBeenLastCalledWith('copy', 'images');
     }
 );
 

@@ -87,7 +87,3 @@ npm run build
 ```
 
 You can preview the production build with `npm run preview`.
-
-## Usage Tracking
-
-LightlyStudio collects anonymous usage data such as errors using PostHog to improve the application.

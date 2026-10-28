@@ -23,7 +23,6 @@ from lightly_studio.api.routes import (
     webapp,
 )
 from lightly_studio.api.routes.api import (
-    analytics,
     annotation,
     annotation_label,
     assisted_labeling,
@@ -157,7 +156,6 @@ api_router.include_router(settings.settings_router)
 api_router.include_router(classifier.classifier_router)
 api_router.include_router(embeddings2d.embeddings2d_router)
 api_router.include_router(features.features_router)
-api_router.include_router(analytics.analytics_router)
 api_router.include_router(assisted_labeling.assisted_labeling_router)
 api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)

@@ -32,7 +32,7 @@ describe('useVideoOrderBy', () => {
 
     describe('selectedDirection', () => {
         it('returns ASC when no sort is active', () => {
-            const { selectedDirection } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { selectedDirection } = useVideoOrderBy();
             expect(get(selectedDirection)).toBe(SortDirection.ASC);
         });
 
@@ -40,14 +40,14 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'file_name', direction: SortDirection.DESC }
             ]);
-            const { selectedDirection } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { selectedDirection } = useVideoOrderBy();
             expect(get(selectedDirection)).toBe(SortDirection.DESC);
         });
     });
 
     describe('selectedLabel', () => {
         it('returns null when no sort is active', () => {
-            const { selectedLabel } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { selectedLabel } = useVideoOrderBy();
             expect(get(selectedLabel)).toBeNull();
         });
 
@@ -55,7 +55,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'duration_s', direction: SortDirection.ASC }
             ]);
-            const { selectedLabel } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { selectedLabel } = useVideoOrderBy();
             expect(get(selectedLabel)).toBe('duration');
         });
 
@@ -67,14 +67,14 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'metadata', field_name: 'brightness', direction: SortDirection.ASC }
             ]);
-            const { selectedLabel } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { selectedLabel } = useVideoOrderBy();
             expect(get(selectedLabel)).toBe('metadata.brightness');
         });
     });
 
     describe('isFieldSelected', () => {
         it('returns false for any field when no sort is active', () => {
-            const { isFieldSelected } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { isFieldSelected } = useVideoOrderBy();
             const check = get(isFieldSelected);
 
             expect(check({ source: 'video', value: 'file_name', label: 'file name' })).toBe(false);
@@ -84,7 +84,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'width', direction: SortDirection.ASC }
             ]);
-            const { isFieldSelected } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { isFieldSelected } = useVideoOrderBy();
             const check = get(isFieldSelected);
 
             expect(check({ source: 'video', value: 'width', label: 'width' })).toBe(true);
@@ -92,7 +92,7 @@ describe('useVideoOrderBy', () => {
         });
 
         it('updates reactively when videoSortBy changes', () => {
-            const { isFieldSelected } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { isFieldSelected } = useVideoOrderBy();
             const field = { source: 'video' as const, value: 'width', label: 'width' };
 
             expect(get(isFieldSelected)(field)).toBe(false);
@@ -107,7 +107,7 @@ describe('useVideoOrderBy', () => {
 
     describe('handleFieldClick', () => {
         it('selects a video field with ASC direction by default', () => {
-            const { handleFieldClick } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { handleFieldClick } = useVideoOrderBy();
 
             handleFieldClick({ source: 'video', value: 'file_name', label: 'file name' });
 
@@ -120,7 +120,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'file_name', direction: SortDirection.ASC }
             ]);
-            const { handleFieldClick } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { handleFieldClick } = useVideoOrderBy();
 
             handleFieldClick({ source: 'video', value: 'file_name', label: 'file name' });
 
@@ -131,7 +131,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'file_name', direction: SortDirection.DESC }
             ]);
-            const { handleFieldClick } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { handleFieldClick } = useVideoOrderBy();
 
             handleFieldClick({ source: 'video', value: 'width', label: 'width' });
 
@@ -141,7 +141,7 @@ describe('useVideoOrderBy', () => {
         });
 
         it('selects a metadata field', () => {
-            const { handleFieldClick } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { handleFieldClick } = useVideoOrderBy();
 
             handleFieldClick({ source: 'metadata', value: 'score', label: 'metadata.score' });
 
@@ -153,7 +153,7 @@ describe('useVideoOrderBy', () => {
 
     describe('toggleDirection', () => {
         it('does nothing when no sort is active', () => {
-            const { toggleDirection } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { toggleDirection } = useVideoOrderBy();
 
             toggleDirection();
 
@@ -164,7 +164,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'video', field_name: 'file_name', direction: SortDirection.ASC }
             ]);
-            const { toggleDirection } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { toggleDirection } = useVideoOrderBy();
 
             toggleDirection();
             expect(updateSortBy).toHaveBeenCalledWith([
@@ -184,7 +184,7 @@ describe('useVideoOrderBy', () => {
             videoSortBy.set([
                 { source: 'metadata', field_name: 'score', direction: SortDirection.ASC }
             ]);
-            const { toggleDirection } = useVideoOrderBy({ collectionId: () => 'col1' });
+            const { toggleDirection } = useVideoOrderBy();
 
             toggleDirection();
 

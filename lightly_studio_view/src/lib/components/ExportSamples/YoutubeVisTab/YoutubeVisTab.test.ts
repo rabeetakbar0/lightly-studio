@@ -104,16 +104,4 @@ describe('YoutubeVisTab', () => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
     });
-
-    it('calls onDownloadClick when the download button is clicked', async () => {
-        mocks.exportCollectionYoutubeVisPrepare.mockResolvedValue({
-            data: { export_key: 'key123' }
-        });
-        const onDownloadClick = vi.fn();
-        render(YoutubeVisTab, { props: { onDownloadClick } });
-        await fireEvent.click(
-            screen.getByTestId('submit-button-youtube-vis-instance-segmentations')
-        );
-        expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
 });

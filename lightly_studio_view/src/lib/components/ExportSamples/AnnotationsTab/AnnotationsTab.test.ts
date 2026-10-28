@@ -161,14 +161,4 @@ describe('AnnotationsTab', () => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
         });
     });
-
-    it('calls onDownloadClick when the download button is clicked', async () => {
-        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
-            data: { export_key: 'key123' }
-        });
-        const onDownloadClick = vi.fn();
-        render(AnnotationsTab, { props: { ...defaultProps, onDownloadClick } });
-        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
-        expect(onDownloadClick).toHaveBeenCalledOnce();
-    });
 });

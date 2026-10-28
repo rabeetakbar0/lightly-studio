@@ -4,7 +4,6 @@ import { get, readonly, writable, type Readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
-import { usePostHog } from '$lib/hooks';
 import { getMetadataComputations } from './getMetadataComputations';
 import { toApiStrategy } from './strategyApiMapping';
 
@@ -15,7 +14,6 @@ interface UseSubmitCombinationSelectionParams {
     setTagSelected: (tagId: string, isSelected: boolean) => void;
     loadTags: () => Promise<void>;
     closeSelectionDialog: () => void;
-    filteredSampleCount: Readable<number>;
 }
 
 interface SubmitParams {
@@ -40,8 +38,6 @@ async function handleSelectionSuccess(
 }
 
 export function useSubmitCombinationSelection(params: UseSubmitCombinationSelectionParams) {
-    const { trackEvent } = usePostHog();
-    const { filteredSampleCount } = params;
     const _isSubmitting = writable(false);
     const _loadingMessage = writable('');
 
@@ -60,27 +56,10 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             preselectedTagId
         } = submitParams;
 
-        const filteredCount = get(filteredSampleCount);
-
         function reportFailure(errorMessage: string): false {
-            trackEvent('sampling_triggered', {
-                collection_id: collectionId,
-                strategies: instances.map((i) => i.type),
-                n_samples: nSamplesToSelect,
-                filtered_sample_count: filteredCount,
-                success: false,
-                error_message: errorMessage
-            });
             toast.error(errorMessage);
             return false;
         }
-
-        trackEvent('sampling_submitted', {
-            collection_id: collectionId,
-            strategies: instances.map((i) => i.type),
-            n_samples: nSamplesToSelect,
-            filtered_sample_count: filteredCount
-        });
 
         try {
             if (isVideoCollection && instances.some((instance) => instance.type === 'similarity')) {
@@ -106,14 +85,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
                 return reportFailure(errorMessage);
             }
 
-            trackEvent('sampling_triggered', {
-                collection_id: collectionId,
-                strategies: instances.map((i) => i.type),
-                n_samples: nSamplesToSelect,
-                filtered_sample_count: filteredCount,
-                success: true,
-                error_message: null
-            });
             try {
                 await handleSelectionSuccess(selectionResultTagName, params);
             } catch (uiError) {
@@ -122,14 +93,6 @@ export function useSubmitCombinationSelection(params: UseSubmitCombinationSelect
             return true;
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
-            trackEvent('sampling_triggered', {
-                collection_id: collectionId,
-                strategies: instances.map((i) => i.type),
-                n_samples: nSamplesToSelect,
-                filtered_sample_count: filteredCount,
-                success: false,
-                error_message: errorMessage
-            });
             console.error('Unexpected error in useSubmitCombinationSelection.submit:', error);
             toast.error('Failed to create selection: ' + errorMessage);
             return false;

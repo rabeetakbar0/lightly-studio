@@ -32,21 +32,6 @@ LIGHTLY_STUDIO_API_URL: Optional[str] = env.str("LIGHTLY_STUDIO_API_URL", defaul
 LIGHTLY_STUDIO_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
 LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
 
-# Anonymous usage tracking. Covers the Python package and the GUI, which reads the flag back from
-# the API. See lightly_studio/analytics/tracking.py.
-LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
-# Overrides the project to report against. Unset or empty, it follows the cohort of the
-# installation, see lightly_studio/analytics/posthog_project.py.
-LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
-
-# The EU instance. The GUI reads this back from the API rather than carrying its own copy. Not an
-# environment variable: the key above is the only part worth pointing elsewhere.
-LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"
-# Marks this machine as a Lightly dev or staff machine, so internal usage can be filtered out of
-# the product metrics. See lightly_studio/analytics/cohort.py for the alternative marker file,
-# which survives recreating the virtualenv.
-LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
-
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
 )

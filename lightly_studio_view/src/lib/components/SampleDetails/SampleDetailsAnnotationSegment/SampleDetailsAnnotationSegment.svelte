@@ -157,7 +157,7 @@
                     refetch
                 });
 
-                await deleteAnnotation(annotationId, annotation.annotation_type);
+                await deleteAnnotation(annotationId);
                 toast.success('Annotation deleted successfully');
                 refetch();
                 if (annotationLabelContext.annotationId === annotationId) {

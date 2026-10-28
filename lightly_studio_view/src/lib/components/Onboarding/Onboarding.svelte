@@ -1,7 +1,7 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { routeHelpers } from '$lib/routes';
-    import { usePostHog, useOnboarding, TOUR_VERSION, useGlobalStorage } from '$lib/hooks';
+    import { useOnboarding, useGlobalStorage } from '$lib/hooks';
     import { get } from 'svelte/store';
     import { onDestroy, onMount } from 'svelte';
     import {
@@ -43,7 +43,6 @@
     const onboarding = useOnboarding();
     const { state } = onboarding;
     const { openFilterPanel, filterPanelCollapsed } = useGlobalStorage();
-    const { ready, trackEvent } = usePostHog();
 
     const ref: TourRef = {
         tour: undefined,
@@ -51,41 +50,24 @@
         menuHighlightCleanup: null,
         stepPlan: DEFAULT_STEP_PLAN
     };
-    let trackingReady = false;
-    let checkingEligibility = false;
     let suppressDismiss = false;
     let loadingDetail = false;
     let activeCollectionId: string | null = null;
 
-    function track(event: string, properties: Record<string, unknown> = {}) {
-        if (!trackingReady) return;
-        trackEvent(event, {
-            tour_version: TOUR_VERSION,
-            collection_id: collectionId,
-            ...properties
-        });
-    }
-
-    const skipTour = () => dismiss('skip_button');
+    const skipTour = () => dismiss();
 
     function eligible(): boolean {
         return enabled && isImages && sampleCount > 0 && !!tileElement();
     }
 
-    async function offerInvitation() {
-        if (checkingEligibility || get(state) !== 'unseen' || !eligible()) return;
-        checkingEligibility = true;
-        trackingReady = await ready;
-        checkingEligibility = false;
-        if (get(state) === 'unseen' && eligible() && onboarding.invite()) {
-            track('onboarding_invitation_shown');
-        }
+    function offerInvitation() {
+        if (get(state) !== 'unseen' || !eligible()) return;
+        onboarding.invite();
     }
 
-    function dismiss(dismissalStage: string) {
+    function dismiss() {
         if (get(state) === 'finished' || get(state) === 'unseen') return;
         steps.cleanupMenuHighlight();
-        track('onboarding_dismissed', { dismissal_stage: dismissalStage });
         onboarding.dismiss();
         ref.stage = null;
         ref.tour?.destroy();
@@ -94,7 +76,6 @@
 
     function finish() {
         steps.cleanupMenuHighlight();
-        track('onboarding_completed');
         onboarding.complete();
         ref.stage = null;
         ref.tour?.destroy();
@@ -122,16 +103,15 @@
             stagePadding: 2,
             allowClose: true,
             overlayOpacity: 0.85,
-            overlayClickBehavior: () => dismiss(ref.stage ?? 'grid'),
+            overlayClickBehavior: () => dismiss(),
             onDestroyed: () => {
-                if (!suppressDismiss && get(state) === 'running') dismiss(ref.stage ?? 'grid');
+                if (!suppressDismiss && get(state) === 'running') dismiss();
             }
         });
     }
 
     async function start() {
         onboarding.start();
-        track('onboarding_started');
         await loadTour();
         if (get(state) === 'running') steps.highlightGrid();
         else ref.tour?.destroy();
@@ -140,14 +120,13 @@
     async function replay() {
         if (!enabled) return;
         // Skip dismiss when there is no active session to clean up.
-        if (get(state) !== 'unseen') dismiss(ref.stage ?? 'invitation');
+        if (get(state) !== 'unseen') dismiss();
         if (!isImages) {
             // Defer replay() until after navigation so that update() triggered
             // by the route change cannot dismiss the new session.
             await goto(routeHelpers.toImages(datasetId, collectionType, collectionId));
         }
         onboarding.replay();
-        track('onboarding_replayed');
         await loadTour();
         update();
     }
@@ -164,10 +143,10 @@
 
     function update() {
         if (activeCollectionId !== null && collectionId !== activeCollectionId) {
-            dismiss(ref.stage ?? 'navigation');
+            dismiss();
         }
         activeCollectionId = collectionId;
-        if (get(state) === 'unseen') void offerInvitation();
+        if (get(state) === 'unseen') offerInvitation();
         if (get(state) === 'running' && !ref.stage && isImages && tileElement())
             steps.highlightGrid();
         if (
@@ -183,7 +162,7 @@
                     loadingDetail = false;
                 });
         }
-        if (get(state) === 'running' && !isImages && ref.stage !== 'detail') dismiss('navigation');
+        if (get(state) === 'running' && !isImages && ref.stage !== 'detail') dismiss();
     }
 
     let replaySeen = get(onboarding.replayRequested);
@@ -217,13 +196,13 @@
     });
 
     onDestroy(() => {
-        if (get(state) === 'running' || get(state) === 'opening_sample') dismiss('navigation');
+        if (get(state) === 'running' || get(state) === 'opening_sample') dismiss();
     });
 </script>
 
 {#if $state === 'invited'}
     <div class="fixed inset-0 z-[10000] bg-black/85"></div>
-    <Invitation onStart={start} onDismiss={() => dismiss('invitation')} />
+    <Invitation onStart={start} onDismiss={dismiss} />
 {/if}
 
 <style>

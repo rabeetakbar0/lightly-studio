@@ -165,12 +165,6 @@ LightlyStudio sends images to your local service and gets embeddings back. The m
 leave your machine.
 -->
 
-### What usage data does LightlyStudio collect, and can I opt out?
-
-LightlyStudio collects anonymous usage analytics. To opt out, set the environment variable
-`LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` before you start LightlyStudio. The GUI then loads no
-analytics.
-
 ## Python API and automation
 
 ### Can I script everything from Python?

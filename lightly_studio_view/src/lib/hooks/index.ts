@@ -63,7 +63,6 @@ export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
-export { usePostHog } from '$lib/hooks/usePostHog';
 export {
     useOnboarding,
     TOUR_VERSION,
@@ -73,7 +72,6 @@ export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDi
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
-export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
 export { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
 export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
 export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';

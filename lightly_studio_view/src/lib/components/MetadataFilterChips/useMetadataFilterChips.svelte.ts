@@ -1,7 +1,7 @@
 import { fromStore } from 'svelte/store';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { formatFloat, formatInteger } from '$lib/utils';
-import { useFiltersClearedSignal, usePostHog } from '$lib/hooks';
+import { useFiltersClearedSignal } from '$lib/hooks';
 import type { CategoricalMetadataValue } from '$lib/services/types';
 
 type Range = { min: number; max: number };
@@ -23,7 +23,6 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         updateMetadataValues,
         updateCategoricalMetadataValues
     } = useMetadataFilters(collectionId);
-    const { trackEvent } = usePostHog();
     const filtersCleared = fromStore(useFiltersClearedSignal().filtersCleared);
 
     const boundsStore = fromStore(metadataBounds);
@@ -110,15 +109,6 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         updateMetadataValues({ ...valuesStore.current, [key]: range });
     };
 
-    const trackFilterChanged = (key: string, action: 'enabled' | 'disabled') => {
-        if (!collectionId) return;
-        trackEvent('metadata_filter_changed', {
-            collection_id: collectionId,
-            field_name: key,
-            action
-        });
-    };
-
     const handleToggle = (key: string, checked: boolean | 'indeterminate') => {
         if (lastCategoricalValues[key]) {
             updateCategoricalMetadataValues({
@@ -134,7 +124,6 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         } else {
             setRange(key, { min: bound.min, max: bound.max });
         }
-        trackFilterChanged(key, checked ? 'enabled' : 'disabled');
     };
 
     const handleClear = (key: string) => {
@@ -152,7 +141,6 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         lastRanges = Object.fromEntries(
             Object.entries(lastRanges).filter(([rangeKey]) => rangeKey !== key)
         );
-        trackFilterChanged(key, 'disabled');
     };
 
     const formatValue = (key: string, value: number): string => {

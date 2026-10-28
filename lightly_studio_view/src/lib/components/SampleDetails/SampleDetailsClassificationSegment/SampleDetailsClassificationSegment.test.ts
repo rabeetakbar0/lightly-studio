@@ -506,7 +506,7 @@ describe('SampleDetailsClassificationSegment', () => {
             await user.click(deleteButton());
 
             expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(1);
-            expect(mocks.deleteAnnotation).toHaveBeenCalledWith('c1', 'classification');
+            expect(mocks.deleteAnnotation).toHaveBeenCalledWith('c1');
             expect(mocks.addReversibleAction).toHaveBeenCalledTimes(1);
             expect(deleteButton()).toBeDisabled();
 

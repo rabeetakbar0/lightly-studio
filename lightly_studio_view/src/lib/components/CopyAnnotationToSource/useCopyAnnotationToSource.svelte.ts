@@ -40,7 +40,7 @@ export const useCopyAnnotationToSource = (getParams: () => Params) => {
             addAnnotationCreateToUndoStack({
                 annotation: created,
                 addReversibleAction,
-                deleteAnnotation: (id, type) => deleteAnnotation(id, type, collectionId),
+                deleteAnnotation: (id) => deleteAnnotation(id, collectionId),
                 refetch: onCopied
             });
             onCopied();

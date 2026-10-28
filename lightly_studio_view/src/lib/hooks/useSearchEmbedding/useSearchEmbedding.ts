@@ -1,7 +1,6 @@
 import { useImageUpload } from '$lib/hooks/useImageUpload/useImageUpload';
 import { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
-import { usePostHog } from '$lib/hooks';
 import { toast } from 'svelte-sonner';
 import { derived, readonly, type Readable, type Writable } from 'svelte/store';
 
@@ -46,8 +45,6 @@ interface Return {
 }
 
 export function useSearchEmbedding({ getCollectionId, embedding }: Params): Return {
-    const { trackEvent } = usePostHog();
-
     const onError = (message: string) => {
         toast.error('Error', { description: message });
     };
@@ -55,25 +52,16 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
     const upload = useImageUpload({
         getCollectionId,
         onError,
-        onSuccess: ({ fileName, embedding: vector, collectionId }) => {
+        onSuccess: ({ fileName, embedding: vector }) => {
             embedding.set({ queryText: fileName, embedding: vector });
-            trackEvent('search_executed', {
-                collection_id: collectionId,
-                search_type: 'image'
-            });
         }
     });
 
     const text = useTextEmbedding({
         getCollectionId,
         onError,
-        onSuccess: ({ queryText, embedding: vector, collectionId }) => {
+        onSuccess: ({ queryText, embedding: vector }) => {
             embedding.set({ queryText, embedding: vector });
-            trackEvent('search_executed', {
-                collection_id: collectionId,
-                search_type: 'text',
-                query_length: queryText.length
-            });
         }
     });
 
@@ -91,22 +79,11 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
         upload.clear();
         if (!input.trim()) {
             embedding.set(undefined);
-        } else {
-            trackEvent('search_initiated', {
-                collection_id: getCollectionId(),
-                search_type: 'text',
-                query_text: input,
-                query_length: input.length
-            });
         }
         await text.embed(input);
     };
 
     const setImage = async (file: File) => {
-        trackEvent('search_initiated', {
-            collection_id: getCollectionId(),
-            search_type: 'image'
-        });
         await upload.upload(file);
     };
 
@@ -126,14 +103,6 @@ export function useSearchEmbedding({ getCollectionId, embedding }: Params): Retu
             upload.setPreview(imagePreview.name, imagePreview.previewUrl, true);
         }
         embedding.set({ queryText, embedding: vector });
-        trackEvent('search_initiated', {
-            collection_id: getCollectionId(),
-            search_type: 'annotation_crop'
-        });
-        trackEvent('search_executed', {
-            collection_id: getCollectionId(),
-            search_type: 'annotation_crop'
-        });
     };
 
     const clear = () => {

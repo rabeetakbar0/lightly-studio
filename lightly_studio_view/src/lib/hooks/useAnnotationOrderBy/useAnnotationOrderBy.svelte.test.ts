@@ -12,14 +12,12 @@ const RUN: EvaluationRunAnnotationMetricsInfoView = {
     metrics: [{ metric_name: 'iou' }]
 };
 
-const { trackEventMock, metricsInfo } = vi.hoisted(() => ({
-    trackEventMock: vi.fn(),
+const { metricsInfo } = vi.hoisted(() => ({
     metricsInfo: { data: [] as unknown[], dataUpdatedAt: 0 }
 }));
 
 vi.mock('$lib/hooks', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/hooks')>()),
-    usePostHog: () => ({ trackEvent: trackEventMock }),
     useAnnotationEvaluationMetricsInfo: () => metricsInfo
 }));
 
@@ -90,23 +88,6 @@ describe('useAnnotationOrderBy', () => {
 
         expect(index).toBe(-1);
         unsubscribe();
-        dispose();
-    });
-
-    it('emits the same analytics event as image sorting', () => {
-        const { handleFieldClick, dispose } = useAnnotationOrderBy({
-            collectionId: () => COLLECTION_ID
-        });
-        flushSync();
-
-        handleFieldClick(mapRunsToAnnotationSortFields([RUN])[0]);
-
-        expect(trackEventMock).toHaveBeenCalledWith('grid_sorted', {
-            collection_id: COLLECTION_ID,
-            sort_source: 'annotation_evaluation_metric',
-            field_name: 'detection eval.iou',
-            direction: 'asc'
-        });
         dispose();
     });
 });

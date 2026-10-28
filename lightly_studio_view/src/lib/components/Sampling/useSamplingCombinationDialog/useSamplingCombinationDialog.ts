@@ -30,23 +30,17 @@ export function useSamplingCombinationDialog({
     });
 
     const { filteredSampleCount } = useGlobalStorage();
-    const { closeSamplingDialog, markSubmitted } = useSamplingDialog();
+    const { closeSamplingDialog } = useSamplingDialog();
     const { buildSelectionFilter } = useSelectionFilter(
         getIsVideoCollection,
         getIsSequenceCollection
     );
 
-    const closeAfterSubmit = () => {
-        markSubmitted();
-        closeSamplingDialog();
-    };
-
     const { isSubmitting, loadingMessage, submit } = useSubmitCombinationSelection({
         tags,
         setTagSelected,
         loadTags,
-        closeSelectionDialog: closeAfterSubmit,
-        filteredSampleCount
+        closeSelectionDialog: closeSamplingDialog
     });
 
     const nSamplesToSelect = writable<number | null>(10);

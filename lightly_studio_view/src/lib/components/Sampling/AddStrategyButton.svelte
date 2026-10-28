@@ -13,7 +13,6 @@
         metadataBalancingDisabledReason?: string;
         subpartDiversityDisabledReason?: string;
         onAdd: (type: StrategyType) => void;
-        onMenuOpen?: () => void;
     }
     let {
         diversityDisabledReason,
@@ -23,8 +22,7 @@
         classBalancingDisabledReason,
         metadataBalancingDisabledReason,
         subpartDiversityDisabledReason,
-        onAdd,
-        onMenuOpen
+        onAdd
     }: Props = $props();
 
     let isOpen = $state(false);
@@ -77,8 +75,7 @@
     }}
     onOpenChange={(open) => {
         isOpen = open;
-        if (open) onMenuOpen?.();
-        else handleMouseLeave();
+        if (!open) handleMouseLeave();
     }}
 >
     {#snippet children()}

@@ -5,7 +5,6 @@ import re
 from collections.abc import Generator
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
 
 import pytest
 from click.testing import CliRunner
@@ -14,7 +13,6 @@ from pytest_mock import MockerFixture
 
 import lightly_studio
 from lightly_studio import cli
-from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
@@ -28,12 +26,6 @@ def cleanup_db_manager() -> Generator[None, None, None]:
     db_manager.close()
 
 
-@pytest.fixture(autouse=True)
-def mock_track(mocker: MockerFixture) -> MagicMock:
-    """Keep the CLI tests off the network whatever the developer's environment configures."""
-    return mocker.patch.object(tracking, "track")
-
-
 def test_main__version_option() -> None:
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["--version"])
@@ -41,7 +33,7 @@ def test_main__version_option() -> None:
     assert re.search(r"lightly-studio, version \d+\.\d+\.\d+", result.output)
 
 
-def test_gui(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_gui(mocker: MockerFixture) -> None:
     mock_connect = mocker.patch.object(db_manager, attribute="connect")
     mock_start_gui = mocker.patch.object(lightly_studio, attribute="start_gui")
     runner = CliRunner()
@@ -49,10 +41,6 @@ def test_gui(mocker: MockerFixture, mock_track: MagicMock) -> None:
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
     mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
-    mock_track.assert_called_once_with(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.GUI.value},
-    )
 
 
 def test_gui__with_host_port(mocker: MockerFixture) -> None:
@@ -126,7 +114,7 @@ def test_gui__with_empty_db_file__complains_about_missing_dataset(
     assert "No datasets found" in str(result.exception)
 
 
-def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart(mocker: MockerFixture) -> None:
     mock_download, mock_connect, mock_create, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart"])
@@ -135,10 +123,6 @@ def test_quickstart(mocker: MockerFixture, mock_track: MagicMock) -> None:
     mock_connect.assert_called_once_with(db_file="quickstart.db", cleanup_existing=True)
     mock_create.assert_called_once_with()
     mock_start_gui.assert_called_once_with(port=None, open_browser=True)
-    mock_track.assert_called_once_with(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART.value},
-    )
 
 
 def test_quickstart__with_force_download(mocker: MockerFixture) -> None:
@@ -158,17 +142,13 @@ def test_quickstart__with_port(mocker: MockerFixture) -> None:
     mock_start_gui.assert_called_once_with(port=9999, open_browser=True)
 
 
-def test_quickstart__with_no_browser(mocker: MockerFixture, mock_track: MagicMock) -> None:
+def test_quickstart__with_no_browser(mocker: MockerFixture) -> None:
     _, _, _, mock_start_gui = _mock_quickstart_dependencies(mocker)
     runner = CliRunner()
     result = runner.invoke(cli=cli.main, args=["quickstart", "--no-browser"])
     assert result.exit_code == 0
     mock_start_gui.assert_called_once_with(port=None, open_browser=False)
     # Reporting does not depend on the browser opening; the GUI can still be visited later.
-    mock_track.assert_called_once_with(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART.value},
-    )
 
 
 def test_quickstart__runs_real_evaluation_pipeline(
@@ -241,9 +221,7 @@ def test_quickstart__second_run_without_force_download_does_not_duplicate_or_cra
     assert len(ground_truth.annotations) == 3
 
 
-def test_quickstart_enterprise(
-    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, mock_track: MagicMock
-) -> None:
+def test_quickstart_enterprise(mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("LIGHTLY_STUDIO_API_KEY", raising=False)
     mock_connect = mocker.patch.object(lightly_studio, attribute="connect")
     mock_dataset = mocker.MagicMock()
@@ -259,10 +237,6 @@ def test_quickstart_enterprise(
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(
         api_url="http://10.0.0.5:8100", token="my-token", api_key=None
-    )
-    mock_track.assert_called_once_with(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": tracking.LaunchSource.QUICKSTART_ENTERPRISE.value},
     )
 
 

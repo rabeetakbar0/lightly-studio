@@ -4,13 +4,6 @@
     import { formatInteger } from '$lib/utils';
     import { Slider } from '$lib/components/ui/slider/index.js';
 
-    interface Props {
-        /** Called when a video field filter (width, height, fps, duration) range changes. */
-        onFilterChanged?: (fieldName: string, min: number, max: number) => void;
-    }
-
-    const { onFilterChanged }: Props = $props();
-
     const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds(
         page.params.collection_id
     );
@@ -24,7 +17,6 @@
                 max: newValues[1]
             }
         });
-        onFilterChanged?.('width', newValues[0], newValues[1]);
     };
 
     const handleChangeHeight = (newValues: number[]) => {
@@ -36,7 +28,6 @@
                 max: newValues[1]
             }
         });
-        onFilterChanged?.('height', newValues[0], newValues[1]);
     };
 
     const handleChangeFps = (newValues: number[]) => {
@@ -48,7 +39,6 @@
                 max: newValues[1]
             }
         });
-        onFilterChanged?.('fps', newValues[0], newValues[1]);
     };
 
     const handleChangeDuration = (newValues: number[]) => {
@@ -60,7 +50,6 @@
                 max: newValues[1]
             }
         });
-        onFilterChanged?.('duration_s', newValues[0], newValues[1]);
     };
 </script>
 

@@ -4,10 +4,7 @@ import { useCategoryVisibility } from './useCategoryVisibility';
 
 describe('useCategoryVisibility', () => {
     it('toggles hidden categories', () => {
-        const { hiddenCategories, toggleCategoryVisibility } = useCategoryVisibility({
-            getCollectionId: () => 'col_1',
-            getColorByType: () => null
-        });
+        const { hiddenCategories, toggleCategoryVisibility } = useCategoryVisibility();
 
         toggleCategoryVisibility(2);
         expect(get(hiddenCategories)).toEqual(new Set([2]));
@@ -17,10 +14,7 @@ describe('useCategoryVisibility', () => {
     });
 
     it('focuses one category and restores all categories on a second focus', () => {
-        const { hiddenCategories, focusCategoryVisibility } = useCategoryVisibility({
-            getCollectionId: () => 'col_1',
-            getColorByType: () => null
-        });
+        const { hiddenCategories, focusCategoryVisibility } = useCategoryVisibility();
         const categories = [2, 3, 4];
 
         focusCategoryVisibility(categories, 3);
@@ -32,7 +26,7 @@ describe('useCategoryVisibility', () => {
 
     it('preserves a hidden reserved row through both isolate branches', () => {
         const { hiddenCategories, toggleCategoryVisibility, focusCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
+            useCategoryVisibility();
         // Colored isolate universe; reserved row 1 lives outside it.
         const categories = [3, 4, 5];
 
@@ -49,7 +43,7 @@ describe('useCategoryVisibility', () => {
 
     it('resets hidden categories', () => {
         const { hiddenCategories, resetCategoryVisibility, toggleCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
+            useCategoryVisibility();
 
         toggleCategoryVisibility(4);
         resetCategoryVisibility();
@@ -59,7 +53,7 @@ describe('useCategoryVisibility', () => {
 
     it('preserves requested reserved rows on reset while clearing remapped color slots', () => {
         const { hiddenCategories, resetCategoryVisibility, toggleCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
+            useCategoryVisibility();
 
         toggleCategoryVisibility(1); // reserved row, stable by index
         toggleCategoryVisibility(4); // color slot, remapped on refresh

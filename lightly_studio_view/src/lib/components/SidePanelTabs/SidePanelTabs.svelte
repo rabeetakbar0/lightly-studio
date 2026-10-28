@@ -5,21 +5,15 @@
     import { useSidePanelTabs } from './useSidePanelTabs';
 
     interface Props {
-        collectionId: string;
         isImages: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
         supportsDistribution: boolean;
     }
-    const {
-        collectionId,
-        isImages,
-        hasMediaWithEmbeddings,
-        supportsEvaluation,
-        supportsDistribution
-    }: Props = $props();
+    const { isImages, hasMediaWithEmbeddings, supportsEvaluation, supportsDistribution }: Props =
+        $props();
 
-    const { activePanel, toggle } = useSidePanelTabs({ getCollectionId: () => collectionId });
+    const { activePanel, toggle } = useSidePanelTabs();
 </script>
 
 <div class="flex w-14 flex-col gap-2 rounded-xl bg-card p-1.5">

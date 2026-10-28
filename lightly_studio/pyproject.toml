@@ -60,9 +60,6 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "jinja2>=3.1.0",
     "alembic-postgresql-enum>=1.10.0",
-    # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
-    # so one major runs everywhere rather than two that have to stay behaviourally identical.
-    "posthog>=6.9,<7.0",
     "lightly-studio-serve>=0.1.0,<0.2.0",
     "httpx>=0.27.2",
     # MCAP recordings: the core reader plus the message decoder for the
@@ -184,11 +181,6 @@ ignore_missing_imports = true
 [[tool.mypy.overrides]]
 module = "sqlalchemy_utils.*"
 ignore_missing_imports = true
-
-# PostHog 6.x leaves parts of its client unannotated.
-[[tool.mypy.overrides]]
-module = "lightly_studio.analytics.posthog_tracker"
-disallow_untyped_calls = false
 
 # `mcap/writer.py` imports `from .__init__ import __version__`, which makes mypy see
 # `mcap/__init__.py` under two module names and give up on the whole run. Not following

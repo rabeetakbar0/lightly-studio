@@ -1,4 +1,4 @@
-import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
+import { derived, writable, type Readable, type Writable } from 'svelte/store';
 import {
     SortDirection,
     type AnnotationEvaluationMetricSortExpr,
@@ -7,8 +7,7 @@ import {
 import {
     formatEvaluationMetricLabel,
     useAnnotationEvaluationMetricsInfo,
-    useAnnotationSortBy,
-    usePostHog
+    useAnnotationSortBy
 } from '$lib/hooks';
 
 interface AnnotationSortField {
@@ -83,21 +82,11 @@ interface SortActions {
     toggleDirection: () => void;
 }
 
-function createSortActions(
-    collectionId: () => string,
-    allSortFields: Readable<AnnotationSortField[]>
-): SortActions {
+function createSortActions(collectionId: () => string): SortActions {
     const { getSortBy, setSortBy } = useAnnotationSortBy();
-    const { trackEvent } = usePostHog();
 
     function applySort(expr: AnnotationEvaluationMetricSortExpr): void {
         setSortBy(collectionId(), expr);
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source: 'annotation_evaluation_metric',
-            field_name: analyticsFieldName(get(allSortFields), expr),
-            direction: expr.direction
-        });
     }
 
     function handleFieldClick(field: AnnotationSortField): void {
@@ -151,7 +140,7 @@ export function useAnnotationOrderBy({
         allSortFields,
         selectedDirection,
         selectedIndex,
-        ...createSortActions(collectionId, allSortFields),
+        ...createSortActions(collectionId),
         dispose
     };
 }
@@ -163,13 +152,4 @@ function isSameField(
     return (
         field.evaluation_run_id === expr.evaluation_run_id && field.metric_name === expr.metric_name
     );
-}
-
-/** Names the run alongside the metric, so analytics can tell two runs of one metric apart. */
-function analyticsFieldName(
-    fields: AnnotationSortField[],
-    expr: AnnotationEvaluationMetricSortExpr
-): string {
-    const field = fields.find((candidate) => isSameField(candidate, expr));
-    return field?.label ?? formatEvaluationMetricLabel(expr.evaluation_run_id, expr.metric_name);
 }

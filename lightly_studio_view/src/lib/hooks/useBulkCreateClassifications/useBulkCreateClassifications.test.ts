@@ -24,8 +24,7 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
 vi.mock('$lib/hooks', () => ({
     useImageAnnotationCountsQueryKey: mocks.countsQueryKey,
     useInvalidateAnnotationGridQueries: () => vi.fn(),
-    useInvalidateEvaluationRunsQueries: () => vi.fn(),
-    usePostHog: () => ({ trackEvent: vi.fn() })
+    useInvalidateEvaluationRunsQueries: () => vi.fn()
 }));
 
 vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

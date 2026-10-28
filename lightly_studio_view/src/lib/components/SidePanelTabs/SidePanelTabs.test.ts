@@ -24,7 +24,6 @@ describe('SidePanelTabs', () => {
     it('renders the Query button only when isImages is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -36,7 +35,6 @@ describe('SidePanelTabs', () => {
 
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -49,7 +47,6 @@ describe('SidePanelTabs', () => {
     it('renders the Embed button only when hasMediaWithEmbeddings is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
@@ -61,7 +58,6 @@ describe('SidePanelTabs', () => {
 
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -74,7 +70,6 @@ describe('SidePanelTabs', () => {
     it('renders the Eval button only when supportsEvaluation is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
@@ -86,7 +81,6 @@ describe('SidePanelTabs', () => {
 
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -99,7 +93,6 @@ describe('SidePanelTabs', () => {
     it('calls setActivePanel with queryEditor when Query button is clicked', async () => {
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -115,7 +108,6 @@ describe('SidePanelTabs', () => {
         activePanel.set('queryEditor');
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -130,7 +122,6 @@ describe('SidePanelTabs', () => {
     it('calls setActivePanel with embeddingPlot when Embed button is clicked', async () => {
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
@@ -145,7 +136,6 @@ describe('SidePanelTabs', () => {
     it('renders the Distribution button only when supportsDistribution is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -157,7 +147,6 @@ describe('SidePanelTabs', () => {
 
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -170,7 +159,6 @@ describe('SidePanelTabs', () => {
     it('calls setActivePanel with distribution when the Distribution button is clicked', async () => {
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
@@ -185,7 +173,6 @@ describe('SidePanelTabs', () => {
     it('calls setActivePanel with evaluationRuns when Eval button is clicked', async () => {
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
@@ -201,7 +188,6 @@ describe('SidePanelTabs', () => {
         activePanel.set('embeddingPlot');
         render(SidePanelTabs, {
             props: {
-                collectionId: 'col1',
                 isImages: true,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: true,

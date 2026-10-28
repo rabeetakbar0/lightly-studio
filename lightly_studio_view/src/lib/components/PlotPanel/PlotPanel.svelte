@@ -51,11 +51,9 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks';
+    import { writable } from 'svelte/store';
 
     let { collectionId }: { collectionId: string } = $props();
-    const { trackEvent } = usePostHog();
     const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
         useGlobalStorage();
     const rangeSelection = $derived(getRangeSelection(collectionId));
@@ -180,10 +178,7 @@
         toggleCategoryVisibility,
         focusCategoryVisibility,
         resetCategoryVisibility
-    } = useCategoryVisibility({
-        getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
-    });
+    } = useCategoryVisibility();
 
     // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
     // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
@@ -298,16 +293,8 @@
             clearRegion();
         } else {
             commitRegion(polygon, selectedCount);
-            if (pendingSelectionType) {
-                trackEvent('embedding_selection_made', {
-                    collection_id: collectionId,
-                    selection_type: pendingSelectionType,
-                    selected_count: selectedCount
-                });
-            }
         }
         setRangeSelection(null);
-        pendingSelectionType = null;
     };
 
     let plotContainer: HTMLDivElement | null = $state(null);
@@ -373,8 +360,6 @@
         return selection !== null && !Array.isArray(selection);
     };
 
-    let pendingSelectionType = $state<'lasso' | 'rectangle' | null>(null);
-
     const getPolygonFromRectangle = (rect: Rectangle) => {
         return [
             { x: rect.xMin, y: rect.yMin },
@@ -412,17 +397,8 @@
         // we clear selection
         if (!selection && $rangeSelection) {
             clearSelection();
-            pendingSelectionType = null;
             return;
         }
-        const nextType = isRectangleSelection(selection) ? 'rectangle' : 'lasso';
-        if (pendingSelectionType === null) {
-            trackEvent('embedding_selection_started', {
-                collection_id: collectionId,
-                selection_type: nextType
-            });
-        }
-        pendingSelectionType = nextType;
         const normalizedSelection = isRectangleSelection(selection)
             ? getPolygonFromRectangle(selection)
             : selection;

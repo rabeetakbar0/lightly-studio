@@ -34,10 +34,7 @@ describe('useImageOrderBy', () => {
 
     describe('selectedDirection', () => {
         it('returns ASC when no sort is active', () => {
-            const { selectedDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedDirection)).toBe(SortDirection.ASC);
         });
 
@@ -49,20 +46,14 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.DESC
                 }
             ]);
-            const { selectedDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedDirection)).toBe(SortDirection.DESC);
         });
     });
 
     describe('selectedLabel', () => {
         it('returns null when no sort is active', () => {
-            const { selectedLabel } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedLabel } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedLabel)).toBeNull();
         });
 
@@ -74,10 +65,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedLabel } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedLabel)).toBe('file name');
         });
 
@@ -97,10 +85,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedLabel } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedLabel)).toBe('metadata.brightness');
         });
 
@@ -122,20 +107,14 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { selectedLabel } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { selectedLabel } = useImageOrderBy({ datasetId: () => 'ds1' });
             expect(get(selectedLabel)).toBe('run1.precision');
         });
     });
 
     describe('isFieldSelected', () => {
         it('returns false for any field when no sort is active', () => {
-            const { isFieldSelected } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { isFieldSelected } = useImageOrderBy({ datasetId: () => 'ds1' });
             const check = get(isFieldSelected);
 
             expect(check({ source: 'image', value: 'file_name', label: 'file name' })).toBe(false);
@@ -149,10 +128,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { isFieldSelected } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { isFieldSelected } = useImageOrderBy({ datasetId: () => 'ds1' });
             const check = get(isFieldSelected);
 
             expect(check({ source: 'image', value: 'width', label: 'width' })).toBe(true);
@@ -168,10 +144,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { isFieldSelected } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { isFieldSelected } = useImageOrderBy({ datasetId: () => 'ds1' });
             const check = get(isFieldSelected);
 
             expect(
@@ -193,10 +166,7 @@ describe('useImageOrderBy', () => {
         });
 
         it('updates reactively when imageSortBy changes', () => {
-            const { isFieldSelected } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { isFieldSelected } = useImageOrderBy({ datasetId: () => 'ds1' });
             const field = { source: 'image' as const, value: 'width', label: 'width' };
 
             expect(get(isFieldSelected)(field)).toBe(false);
@@ -215,10 +185,7 @@ describe('useImageOrderBy', () => {
 
     describe('handleFieldClick', () => {
         it('selects an image field with ASC direction by default', () => {
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { handleFieldClick } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             handleFieldClick({ source: 'image', value: 'file_name', label: 'file name' });
 
@@ -239,10 +206,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { handleFieldClick } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             handleFieldClick({ source: 'image', value: 'file_name', label: 'file name' });
 
@@ -257,10 +221,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.DESC
                 }
             ]);
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { handleFieldClick } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             handleFieldClick({ source: 'image', value: 'width', label: 'width' });
 
@@ -274,10 +235,7 @@ describe('useImageOrderBy', () => {
         });
 
         it('selects a metadata field', () => {
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { handleFieldClick } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             handleFieldClick({
                 source: 'metadata',
@@ -295,10 +253,7 @@ describe('useImageOrderBy', () => {
         });
 
         it('selects an evaluation metric field with the highest value first', () => {
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { handleFieldClick } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             handleFieldClick({
                 source: 'evaluation_metric',
@@ -320,10 +275,7 @@ describe('useImageOrderBy', () => {
 
     describe('toggleDirection', () => {
         it('does nothing when no sort is active', () => {
-            const { toggleDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { toggleDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             toggleDirection();
 
@@ -338,10 +290,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { toggleDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             toggleDirection();
             expect(updateSortBy).toHaveBeenCalledWith([
@@ -377,10 +326,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { toggleDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             toggleDirection();
 
@@ -402,10 +348,7 @@ describe('useImageOrderBy', () => {
                     direction: SortDirection.ASC
                 }
             ]);
-            const { toggleDirection } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+            const { toggleDirection } = useImageOrderBy({ datasetId: () => 'ds1' });
 
             toggleDirection();
 

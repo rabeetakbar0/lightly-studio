@@ -66,9 +66,9 @@
     {/snippet}
     {#snippet auxControls()}
         {#if isImages}
-            <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />
+            <ImageOrderBy datasetId={collectionDatasetId} />
         {:else if isVideos}
-            <VideoOrderBy {collectionId} />
+            <VideoOrderBy />
         {:else if isAnnotations}
             <AnnotationOrderBy {collectionId} datasetId={collectionDatasetId} />
         {/if}

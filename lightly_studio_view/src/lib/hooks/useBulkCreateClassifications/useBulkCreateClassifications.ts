@@ -10,8 +10,7 @@ import {
 import {
     useImageAnnotationCountsQueryKey,
     useInvalidateAnnotationGridQueries,
-    useInvalidateEvaluationRunsQueries,
-    usePostHog
+    useInvalidateEvaluationRunsQueries
 } from '$lib/hooks';
 import { useQueryClient } from '@tanstack/svelte-query';
 import { tick } from 'svelte';
@@ -26,8 +25,6 @@ type BulkCreateClassificationsResponse = Awaited<ReturnType<typeof requestBulkCr
 type BulkCreateClassificationsByFilterBody = NonNullable<
     Parameters<typeof bulkCreateClassificationsByFilter>[0]['body']
 >;
-
-type TrackEvent = ReturnType<typeof usePostHog>['trackEvent'];
 
 interface SelectAllSnapshot {
     filter: BulkCreateClassificationsByFilterBody['filter'];
@@ -111,24 +108,10 @@ const invalidateBulkCreateQueries = async ({
     client.invalidateQueries({ queryKey: useImageAnnotationCountsQueryKey });
 };
 
-const trackBulkCreate = (
-    trackEvent: TrackEvent,
-    { collectionId, selectedIds }: BulkCreateClassificationsInput,
-    result: BulkCreateClassificationsResult
-) => {
-    trackEvent('annotations_bulk_labeled', {
-        collection_id: collectionId,
-        selected_count: selectedIds.size,
-        created_count: result.created_count,
-        skipped_count: result.skipped_count
-    });
-};
-
 export const useBulkCreateClassifications = (): UseBulkCreateClassifications => {
     const client = useQueryClient();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
     const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
-    const { trackEvent } = usePostHog();
 
     const addClass = async (input: BulkCreateClassificationsInput) => {
         const result = unwrapBulkCreateResponse(await requestBulkCreate(input));
@@ -142,7 +125,6 @@ export const useBulkCreateClassifications = (): UseBulkCreateClassifications => 
             collectionId: input.collectionId,
             rootCollectionId: input.rootCollectionId
         });
-        trackBulkCreate(trackEvent, input, result);
         toast.success(formatBulkCreateToast(result, input.selectedIds.size));
         return result;
     };

@@ -1,7 +1,6 @@
 <script lang="ts">
     import { browser } from '$app/environment';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { usePostHog } from '$lib/hooks';
     import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
     import { onMount } from 'svelte';
     import '../app.css';
@@ -39,11 +38,10 @@
         }
     });
 
-    // Initialize settings and analytics once at startup
+    // Initialize settings once at startup
     onMount(() => {
         if (browser) {
             useSettings().initSettings();
-            usePostHog();
         }
     });
 

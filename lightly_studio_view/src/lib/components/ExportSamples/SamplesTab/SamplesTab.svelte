@@ -6,12 +6,6 @@
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
 
-    interface Props {
-        onDownloadClick?: () => void;
-    }
-
-    let { onDownloadClick }: Props = $props();
-
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
 
@@ -39,10 +33,7 @@
     <ExportDownloadButton
         isLoading={$exportIsLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
-            onDownloadClick?.();
-            handleExport();
-        }}
+        onclick={handleExport}
         testId="submit-button-samples"
     />
 </div>

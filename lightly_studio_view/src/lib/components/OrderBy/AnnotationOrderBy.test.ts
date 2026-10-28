@@ -19,7 +19,6 @@ const RUN: EvaluationRunAnnotationMetricsInfoView = {
 };
 
 const mocks = vi.hoisted(() => ({
-    trackEvent: vi.fn(),
     metricsProxy: { data: null as unknown[] | null, dataUpdatedAt: 0 },
     hasEmbeddingsProxy: { data: true as boolean | undefined },
     textEmbeddingValue: undefined as TextEmbedding | undefined,
@@ -30,10 +29,6 @@ const mocks = vi.hoisted(() => ({
 
 // Mocked at the source modules rather than at the `$lib/hooks` barrel, so both the component and
 // the hook it uses see the mocks when importing through the barrel.
-vi.mock('$lib/hooks/usePostHog', () => ({
-    usePostHog: () => ({ trackEvent: mocks.trackEvent })
-}));
-
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ textEmbedding: readable(mocks.textEmbeddingValue) })
 }));
@@ -160,21 +155,6 @@ describe('AnnotationOrderBy', () => {
         render(AnnotationOrderBy, { props: defaultProps });
 
         expect(screen.getByTestId('sort-by-trigger')).toBeEnabled();
-    });
-
-    it('fires grid_sorted analytics with the same shape as image sorting', async () => {
-        const user = userEvent.setup();
-        render(AnnotationOrderBy, { props: defaultProps });
-
-        await user.click(screen.getByTestId('sort-by-trigger'));
-        await user.click(screen.getByTestId('sort-field-run-1-iou'));
-
-        expect(mocks.trackEvent).toHaveBeenCalledWith('grid_sorted', {
-            collection_id: COLLECTION_ID,
-            sort_source: 'annotation_evaluation_metric',
-            field_name: 'detection eval.iou',
-            direction: 'asc'
-        });
     });
 
     it('warns and offers a recompute when the run the grid sorts by is stale', () => {

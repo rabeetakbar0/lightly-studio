@@ -16,7 +16,6 @@
         allowDeselect?: boolean;
         isEvaluationSort?: boolean;
         onValueChange: (value: string) => void;
-        onOpen: () => void;
         onToggleDirection: () => void;
     }
 
@@ -29,7 +28,6 @@
         allowDeselect = false,
         isEvaluationSort = false,
         onValueChange,
-        onOpen,
         onToggleDirection
     }: Props = $props();
 
@@ -51,9 +49,6 @@
         {triggerLabel}
         {allowDeselect}
         {onValueChange}
-        onOpenChange={(open) => {
-            if (open) onOpen();
-        }}
         {disabled}
         placeholder="Sort by"
         size="xs"

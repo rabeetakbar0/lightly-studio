@@ -6,12 +6,6 @@
     import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
 
-    interface Props {
-        onDownloadClick?: () => void;
-    }
-
-    let { onDownloadClick }: Props = $props();
-
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
 
@@ -34,10 +28,7 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
-            onDownloadClick?.();
-            handleDownload();
-        }}
+        onclick={handleDownload}
         testId="submit-button-captions"
     />
 </div>

@@ -28,7 +28,7 @@ export function useDeleteCuboidAnnotation({
 
         deletingIds.add(cuboidId);
         try {
-            await deleteAnnotation(cuboidId, annotation.annotation_type);
+            await deleteAnnotation(cuboidId);
             toast.success('Annotation deleted successfully');
             return true;
         } catch {

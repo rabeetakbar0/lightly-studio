@@ -17,17 +17,3 @@ Stay updated with the latest developments, tips, and tutorials by following us:
 - [Discord](https://discord.com/invite/xvNJW94)
 - [LinkedIn](https://www.linkedin.com/company/lightly-tech)
 
-## Usage Tracking
-
-LightlyStudio reports anonymous usage data: an ID generated on first run, how the app was started,
-whether the installation is a released package, a build from source, a CI run or a Lightly machine,
-the LightlyStudio, Python and OS versions, and how you load data. No image data, file paths or
-annotations leave your machine.
-
-Turn it off with:
-
-```shell
-export LIGHTLY_STUDIO_ANALYTICS_ENABLED=false
-```
-
-This covers the GUI too.

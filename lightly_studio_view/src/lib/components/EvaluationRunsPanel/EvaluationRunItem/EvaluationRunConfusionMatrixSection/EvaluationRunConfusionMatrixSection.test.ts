@@ -30,13 +30,8 @@ const echartsMock = vi.hoisted(() => {
     };
 });
 
-vi.mock('$app/state', () => ({
-    page: { params: { dataset_id: 'ds-1' } }
-}));
-
 vi.mock('$lib/hooks', () => ({
-    useEvaluationConfusionMatrix: vi.fn(() => queryState),
-    usePostHog: vi.fn(() => ({ trackEvent: vi.fn(), init: vi.fn() }))
+    useEvaluationConfusionMatrix: vi.fn(() => queryState)
 }));
 
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({

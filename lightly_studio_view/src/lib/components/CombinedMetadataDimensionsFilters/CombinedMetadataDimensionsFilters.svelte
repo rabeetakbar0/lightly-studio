@@ -20,8 +20,6 @@
         isVideos?: boolean;
         /** Whether the collection contains video frames; shows frame number filter. */
         isVideoFrames?: boolean;
-        /** Called when any filter range changes, with the field name and new min/max values. */
-        onFilterChanged?: (fieldName: string, min: number, max: number) => void;
         isImageCollection?: boolean;
         categoricalFilter?: ImageFilter;
         categoricalKeys?: string[];
@@ -34,7 +32,6 @@
         showDimensions = true,
         isVideos = false,
         isVideoFrames = false,
-        onFilterChanged,
         isImageCollection = false,
         categoricalFilter,
         categoricalKeys = [],
@@ -57,7 +54,6 @@
             min_height: $values.min_height,
             max_height: $values.max_height
         });
-        onFilterChanged?.('width', newValues[0], newValues[1]);
     };
 
     const handleChangeHeight = (newValues: number[]) => {
@@ -68,7 +64,6 @@
             min_height: newValues[0],
             max_height: newValues[1]
         });
-        onFilterChanged?.('height', newValues[0], newValues[1]);
     };
 
     // Metadata filters logic
@@ -94,7 +89,6 @@
         const currentValues: MetadataValues = { ...$metadataValues };
         currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
         updateMetadataValues(currentValues);
-        onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
     };
 </script>
 
@@ -148,11 +142,11 @@
                 </div>
             </div>
         {:else if isVideos}
-            <VideoFieldBoundsFilters {onFilterChanged} />
+            <VideoFieldBoundsFilters />
         {/if}
 
         {#if isVideoFrames}
-            <VideoFrameBoundsFilter {onFilterChanged} />
+            <VideoFrameBoundsFilter />
         {/if}
 
         {#if numericalMetadata.length > 0}

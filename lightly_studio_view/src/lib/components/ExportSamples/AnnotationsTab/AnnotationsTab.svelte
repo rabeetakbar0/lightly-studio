@@ -25,8 +25,6 @@
         testId: string;
         /** Sample type whose annotations are being exported. */
         sampleType: 'image' | 'video';
-        /** Optional callback invoked when the download button is clicked. */
-        onDownloadClick?: () => void;
     }
 
     let {
@@ -35,8 +33,7 @@
         annotationSources,
         selectedAnnotationCollectionId = $bindable(),
         testId,
-        sampleType,
-        onDownloadClick
+        sampleType
     }: Props = $props();
 
     const collectionId = page.params.collection_id!;
@@ -84,10 +81,7 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
-            onDownloadClick?.();
-            handleDownload();
-        }}
+        onclick={handleDownload}
         {testId}
     />
 </div>

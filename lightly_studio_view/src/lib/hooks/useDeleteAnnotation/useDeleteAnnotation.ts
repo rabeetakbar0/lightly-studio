@@ -4,7 +4,6 @@ import {
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 import { useInvalidateEvaluationRunsQueries } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 
@@ -12,7 +11,6 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
     const mutation = createMutation(() => deleteAnnotationMutation());
 
     const client = useQueryClient();
-    const { trackEvent } = usePostHog();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
     const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
 
@@ -28,11 +26,7 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
         invalidateEvaluationRunsQueries();
     };
 
-    const deleteAnnotation = (
-        annotationId: string,
-        annotationType: string,
-        collectionId = getCollectionId()
-    ) =>
+    const deleteAnnotation = (annotationId: string, collectionId = getCollectionId()) =>
         new Promise<void>((resolve, reject) => {
             mutation.mutate(
                 {
@@ -44,10 +38,6 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
                 {
                     onSuccess: () => {
                         refetch(collectionId);
-                        trackEvent('annotation_deleted', {
-                            collection_id: collectionId,
-                            annotation_type: annotationType
-                        });
                         resolve();
                     },
                     onError: (error) => {

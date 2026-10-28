@@ -1,7 +1,3 @@
-const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
-vi.mock('$lib/hooks', () => ({
-    usePostHog: () => ({ trackEvent })
-}));
 vi.mock('$app/state', () => ({
     page: { params: { dataset_id: 'image-collection', collection_id: 'annotation-collection' } }
 }));

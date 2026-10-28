@@ -2,7 +2,6 @@ import { type AnnotationUpdateInput } from '$lib/api/lightly_studio_local';
 import { updateAnnotationsMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { useImageAnnotationCountsQueryKey } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
-import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 import { useInvalidateEvaluationRunsQueries } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
 
@@ -14,7 +13,6 @@ export const useUpdateAnnotationsMutation = ({
     const mutation = createMutation(() => updateAnnotationsMutation());
 
     const client = useQueryClient();
-    const { trackEvent } = usePostHog();
     const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
     const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
 
@@ -36,20 +34,6 @@ export const useUpdateAnnotationsMutation = ({
             body: inputs
         });
         refetch(collectionId);
-        const labelInputs = inputs.filter((input) => input.label_name != null);
-        if (inputs.length === 1) {
-            trackEvent('annotation_label_updated', {
-                collection_id: collectionId,
-                annotation_id: inputs[0].annotation_id,
-                label_name: labelInputs[0]?.label_name
-            });
-        } else if (inputs.length > 1) {
-            trackEvent('annotations_bulk_labeled', {
-                collection_id: collectionId,
-                annotation_ids: inputs.map((input) => input.annotation_id),
-                annotation_count: inputs.length
-            });
-        }
     };
 
     return {

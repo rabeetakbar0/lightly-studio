@@ -15,7 +15,6 @@
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
-    import { usePostHog } from '$lib/hooks';
 
     interface Props {
         collection: CollectionView;
@@ -41,27 +40,9 @@
     const { setIsEditingMode, isEditingMode, reversibleActions, executeReversibleAction } =
         page.data.globalStorage;
 
-    const { trackEvent } = usePostHog();
-
-    type TriggeredBy = 'click' | 'keyboard_shortcut';
-
-    const setEditMode = (active: boolean, triggeredBy: TriggeredBy) => {
-        if (active) {
-            trackEvent('edit_mode_started', {
-                collection_id: collection.collection_id,
-                triggered_by: triggeredBy
-            });
-        }
-        setIsEditingMode(active);
-    };
-
-    const executeUndoAction = async (triggeredBy: TriggeredBy) => {
+    const executeUndoAction = async () => {
         const latestAction = $reversibleActions[0];
         if (latestAction) {
-            trackEvent('edit_undo', {
-                collection_id: collection.collection_id,
-                triggered_by: triggeredBy
-            });
             await executeReversibleAction(latestAction.id);
         }
     };
@@ -75,9 +56,9 @@
             return;
         }
         if (event.key === get(settingsStore).key_toggle_edit_mode) {
-            setEditMode(!$isEditingMode, 'keyboard_shortcut');
+            setIsEditingMode(!$isEditingMode);
         } else if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') {
-            void executeUndoAction('keyboard_shortcut');
+            void executeUndoAction();
         }
     };
 
@@ -121,7 +102,7 @@
                         <Button
                             icon={Undo2}
                             buttonProps={{
-                                onclick: () => executeUndoAction('click'),
+                                onclick: executeUndoAction,
                                 disabled: $reversibleActions.length === 0,
                                 title: $reversibleActions[0]
                                     ? $reversibleActions[0].description
@@ -135,7 +116,7 @@
                         <Button
                             icon={Check}
                             buttonProps={{
-                                onclick: () => setEditMode(false, 'click'),
+                                onclick: () => setIsEditingMode(false),
                                 title: 'Finish Editing',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'
@@ -147,7 +128,7 @@
                         <Button
                             icon={Pencil}
                             buttonProps={{
-                                onclick: () => setEditMode(true, 'click'),
+                                onclick: () => setIsEditingMode(true),
                                 title: 'Edit annotations',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'

@@ -1,8 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { Info } from '@lucide/svelte';
-    import { get } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
@@ -26,7 +24,6 @@
     // Subpart diversity needs annotation crop embeddings, which are only generated for images.
     const lacksCropEmbeddings = $derived(isVideoCollection || isSequenceCollection);
 
-    const { trackEvent } = usePostHog();
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
 
     const {
@@ -65,54 +62,6 @@
         onSubmitSuccess: resetStrategies
     });
 
-    function handleOpenDialog() {
-        openSamplingDialog({
-            collection_id: collectionId,
-            filtered_sample_count: get(filteredSampleCount)
-        });
-    }
-
-    function handleCloseDialog() {
-        closeSamplingDialog({
-            collection_id: collectionId,
-            strategy_count: $instances.length
-        });
-    }
-
-    function handleMenuOpen() {
-        trackEvent('add_strategy_menu_opened', {
-            collection_id: collectionId,
-            current_strategy_count: $instances.length
-        });
-    }
-
-    function handleAddStrategy(type: Parameters<typeof addStrategy>[0]) {
-        trackEvent('sampling_strategy_added', {
-            collection_id: collectionId,
-            strategy_type: type,
-            strategy_count: $instances.length + 1
-        });
-        addStrategy(type);
-    }
-
-    function handleDuplicateStrategy(instanceId: string, instanceType: string) {
-        trackEvent('sampling_strategy_duplicated', {
-            collection_id: collectionId,
-            strategy_type: instanceType,
-            strategy_count: $instances.length + 1
-        });
-        duplicateStrategy(instanceId);
-    }
-
-    function handleRemoveStrategy(instanceId: string, instanceType: string) {
-        trackEvent('sampling_strategy_removed', {
-            collection_id: collectionId,
-            strategy_type: instanceType,
-            strategy_count: $instances.length - 1
-        });
-        removeStrategy(instanceId);
-    }
-
     // TODO(Leonardo, 06/2026): Update once there are multiple embedding models - currently only one diversity
     // strategy is supported since all samples share a single embedding space.
     const hasDiversity = $derived($instances.some((i) => i.type === 'diversity'));
@@ -122,7 +71,7 @@
 
 <Dialog.Root
     open={$isSamplingDialogOpen}
-    onOpenChange={(open) => (open ? handleOpenDialog() : handleCloseDialog())}
+    onOpenChange={(open) => (open ? openSamplingDialog() : closeSamplingDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -170,8 +119,7 @@
                                       : hasSubpartDiversity
                                         ? 'Only one subpart diversity strategy can be added per selection.'
                                         : undefined}
-                                onAdd={handleAddStrategy}
-                                onMenuOpen={handleMenuOpen}
+                                onAdd={addStrategy}
                             />
                         </div>
 
@@ -191,10 +139,8 @@
                                         isDuplicateDisabled={instance.type === 'diversity' ||
                                             instance.type === 'deduplication' ||
                                             instance.type === 'subpart_diversity'}
-                                        onRemove={() =>
-                                            handleRemoveStrategy(instance.id, instance.type)}
-                                        onDuplicate={() =>
-                                            handleDuplicateStrategy(instance.id, instance.type)}
+                                        onRemove={() => removeStrategy(instance.id)}
+                                        onDuplicate={() => duplicateStrategy(instance.id)}
                                         onUpdate={(params) => updateParams(instance.id, params)}
                                         onToggleExpand={() => toggleExpand(instance.id)}
                                     />
@@ -282,7 +228,7 @@
                         variant="outline"
                         buttonProps={{
                             type: 'button',
-                            onclick: handleCloseDialog,
+                            onclick: closeSamplingDialog,
                             disabled: $isSubmitting,
                             'data-testid': 'sampling-dialog-cancel'
                         }}

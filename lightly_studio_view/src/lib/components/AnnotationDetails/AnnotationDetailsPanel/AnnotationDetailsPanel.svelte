@@ -29,7 +29,7 @@
 
     const handleDeleteAnnotation = async () => {
         try {
-            await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
+            await deleteAnnotation(annotation.sample_id);
 
             toast.success('Annotation deleted successfully');
 

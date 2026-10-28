@@ -8,8 +8,6 @@ from pathlib import Path
 import click
 
 import lightly_studio
-from lightly_studio.analytics import tracking
-from lightly_studio.analytics.tracking import LaunchSource
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
 from lightly_studio.utils import download
@@ -72,10 +70,6 @@ def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None
         config=evaluation_config,
     )
 
-    tracking.track(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": LaunchSource.QUICKSTART.value},
-    )
     lightly_studio.start_gui(port=port, open_browser=not no_browser)
 
 
@@ -140,11 +134,6 @@ def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str |
         config=evaluation_config,
     )
 
-    tracking.track(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": LaunchSource.QUICKSTART_ENTERPRISE.value},
-    )
-
 
 @main.command()
 @click.option("--host", default=None, type=str, help="Host to bind the server to.")
@@ -180,10 +169,6 @@ def gui(
     if db_file is not None and db_url is not None:
         raise click.UsageError("Options '--db-file' and '--db-url' are mutually exclusive.")
     db_manager.connect(db_file=db_file, db_url=db_url, must_exist=True)
-    tracking.track(
-        event=tracking.APP_LAUNCHED,
-        properties={"launch_source": LaunchSource.GUI.value},
-    )
     lightly_studio.start_gui(host=host, port=port, open_browser=not no_browser)
 
 

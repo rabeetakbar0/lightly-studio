@@ -126,7 +126,7 @@
                 refetch
             });
 
-            await deleteAnnotation(annotationId, annotation.annotation_type);
+            await deleteAnnotation(annotationId);
             toast.success('Classification deleted successfully');
             refetch();
         } catch (error) {

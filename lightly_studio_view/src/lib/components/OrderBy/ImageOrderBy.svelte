@@ -1,19 +1,17 @@
 <script lang="ts">
     import { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
-    import { useGlobalStorage, usePostHog } from '$lib/hooks';
+    import { useGlobalStorage } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import { getEvaluationMetricLabel } from '$lib/utils/evaluationMetricDisplay';
     import OrderByControl from './OrderByControl.svelte';
 
     interface Props {
-        collectionId: string;
         datasetId: string;
     }
 
-    const { collectionId, datasetId }: Props = $props();
+    const { datasetId }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
-    const { trackEvent } = usePostHog();
     const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
@@ -24,7 +22,7 @@
         handleFieldClick,
         toggleDirection,
         dispose
-    } = useImageOrderBy({ collectionId: () => collectionId, datasetId: () => datasetId });
+    } = useImageOrderBy({ datasetId: () => datasetId });
 
     $effect(() => {
         return () => dispose();
@@ -73,6 +71,5 @@
     disabled={isSimilaritySearchActive}
     allowDeselect
     onValueChange={handleValueChange}
-    onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
     onToggleDirection={toggleDirection}
 />

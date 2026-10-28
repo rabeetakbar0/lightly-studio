@@ -29,7 +29,6 @@ concurrency:
 env:
   # The frontend build needs more heap than the default, same as the test workflows.
   NODE_OPTIONS: --max-old-space-size=4096
-  POSTHOG_CLI_VERSION: "0.18.4"
 
 jobs:
   # Its own job ahead of the build, so a tag that was never drafted or is
@@ -59,10 +58,6 @@ jobs:
 
   # Runs the tagged commit's own code, so it must not be able to mint a PyPI
   # credential: no `id-token: write`, and all it hands onwards is the artifact.
-  # PostHog upload secrets are not injected here — source maps are uploaded by a
-  # separate job that runs no tag-controlled code. The inject-only credentials
-  # are needed at build time (to embed the project reference into JS files) but
-  # do not grant upload access.
   build:
     needs: precheck
     runs-on: ubuntu-latest
@@ -75,10 +70,6 @@ jobs:
     env:
       TAG: ${{ inputs.tag }}
       PYTHONPATH: ${{ github.workspace }}/.github/scripts
-      SOURCEMAP: "true"
-      POSTHOG_HOST: ${{ secrets.POSTHOG_HOST }}
-      POSTHOG_CLI_API_KEY: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
-      POSTHOG_CLI_PROJECT_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
     steps:
       # `refs/tags/` because actions/checkout resolves an unqualified ref as a
       # branch first, and a branch sharing the tag's name would be built in the
@@ -163,108 +154,3 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-      - name: Upload Source Maps
-        if: steps.package.outputs.needs_node == 'true'
-        uses: actions/upload-artifact@v7
-        with:
-          name: sourcemaps
-          path: ${{ steps.package.outputs.directory }}/sourcemaps
-          if-no-files-found: error
-          retention-days: 7
-
-  # Runs no tag-controlled code — just downloads the artifact and calls the
-  # PostHog API. Gated to the default-branch ref so that a workflow_dispatch
-  # from another branch cannot reach this secret-bearing step.
-  upload-sourcemaps:
-    needs: build
-    if: >-
-      needs.build.outputs.needs_node == 'true' &&
-      github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions: {}
-    steps:
-      - name: Download Source Maps
-        uses: actions/download-artifact@v8
-        with:
-          name: sourcemaps
-          path: sourcemaps
-
-      - name: Install PostHog CLI
-        run: npm install -g @posthog/cli@${{ env.POSTHOG_CLI_VERSION }}
-
-      - name: Upload Source Maps to PostHog
-        env:
-          POSTHOG_CLI_TOKEN: ${{ secrets.POSTHOG_PERSONAL_API_KEY }}
-          POSTHOG_CLI_ENV_ID: ${{ secrets.POSTHOG_PROJECT_ID }}
-        run: |
-          posthog-cli \
-            --host "${{ secrets.POSTHOG_HOST }}" \
-            sourcemap upload \
-            --directory sourcemaps \
-            --version "${{ needs.build.outputs.version }}" \
-          || echo "::warning::PostHog sourcemap upload failed; release continues without uploaded source maps."
-
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    # What PyPI's trusted publisher checks the OIDC claim against, so only this
-    # job of this file can publish. `pypi` carries the approval gate and is
-    # restricted to main; `testpypi` has neither, so a rehearsal is unattended.
-    environment: ${{ inputs.target }}
-    permissions:
-      contents: write
-      id-token: write
-    env:
-      TAG: ${{ inputs.tag }}
-    steps:
-      - name: Download the Distributions
-        uses: actions/download-artifact@v8
-        with:
-          name: dist
-          path: dist
-
-      # Not `uv publish`, which uploads PEP 740 attestations but does not create
-      # them. Given no password, so a misconfigured publisher fails here rather
-      # than falling back to looking for a token. `skip-existing` lets a run
-      # that uploaded but failed to un-draft be re-dispatched.
-      - name: Publish to the Index
-        uses: pypa/gh-action-pypi-publish@v1.14.2
-        with:
-          repository-url: >-
-            ${{ inputs.target == 'pypi' && 'https://upload.pypi.org/legacy/'
-            || 'https://test.pypi.org/legacy/' }}
-          skip-existing: true
-
-      # A release's author is whichever identity's token created it, so a
-      # workflow-created release always reads as github-actions[bot]. This
-      # workflow is dispatch-triggered, so the notes name the person who decided
-      # to release instead.
-      - name: Publish the draft release
-        if: inputs.target == 'pypi'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPO: ${{ github.repository }}
-          ACTOR: ${{ github.actor }}
-        run: |
-          set -euo pipefail
-          gh release view "${TAG}" --repo "${REPO}" --json body --jq .body \
-            > "${RUNNER_TEMP}/release-notes.md"
-          printf '\nReleased by @%s\n' "${ACTOR}" >> "${RUNNER_TEMP}/release-notes.md"
-          gh release edit "${TAG}" --repo "${REPO}" \
-            --draft=false \
-            --notes-file "${RUNNER_TEMP}/release-notes.md"
-          echo "::notice::Published ${TAG}."
-
-  # After `publish`, so nothing is announced that is not on PyPI and public.
-  announce:
-    needs: publish
-    if: inputs.target == 'pypi'
-    uses: ./.github/workflows/announce_release.yml
-    with:
-      tag: ${{ inputs.tag }}
-      tolerate-failure: true
-    permissions:
-      contents: read
-    secrets: inherit

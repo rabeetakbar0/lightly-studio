@@ -1,7 +1,6 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { usePostHog } from '$lib/hooks';
 import {
     formatEvaluationMetricLabel,
     useImageSortFields,
@@ -11,7 +10,6 @@ import {
 import type { ImageSortExpr } from '$lib/hooks/useImagesInfinite/types';
 
 interface UseImageOrderByParams {
-    collectionId: () => string;
     datasetId: () => string;
 }
 
@@ -42,26 +40,9 @@ function checkIsFieldSelected(field: SortField, current: ImageSortExpr | undefin
     );
 }
 
-function sortExprAnalytics(expr: ImageSortExpr): { sort_source: string; field_name: string } {
-    if (expr.source === 'evaluation_metric') {
-        return {
-            sort_source: 'evaluation_metric',
-            field_name: `${expr.evaluation_run_name}.${expr.metric_name}`
-        };
-    }
-    return {
-        sort_source: expr.source === 'metadata' ? 'metadata_field' : 'image_field',
-        field_name: expr.field_name
-    };
-}
-
-export function useImageOrderBy({
-    collectionId,
-    datasetId
-}: UseImageOrderByParams): UseImageOrderByReturn {
+export function useImageOrderBy({ datasetId }: UseImageOrderByParams): UseImageOrderByReturn {
     const { imageSortBy, updateSortBy } = useImageFilters();
     const { allSortFields, dispose } = useImageSortFields({ datasetId });
-    const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
         imageSortBy,
@@ -124,13 +105,6 @@ export function useImageOrderBy({
                       direction
                   };
         updateSortBy([next]);
-        const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source,
-            field_name,
-            direction
-        });
     }
 
     function toggleDirection() {
@@ -140,13 +114,6 @@ export function useImageOrderBy({
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
         const next: ImageSortExpr = { ...current, direction };
         updateSortBy([next]);
-        const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source,
-            field_name,
-            direction
-        });
     }
 
     return {

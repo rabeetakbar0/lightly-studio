@@ -6,7 +6,6 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { ExportFormat } from '$lib/api/lightly_studio_local';
     import { useAnnotationCollections, useExportDialog, useGlobalStorage } from '$lib/hooks';
-    import { useExportTracking } from './useExportTracking/useExportTracking';
     import SamplesTab from './SamplesTab/SamplesTab.svelte';
     import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
     import PrepareDatasetTab from './PrepareDatasetTab/PrepareDatasetTab.svelte';
@@ -27,21 +26,13 @@
     const supportsVideoClassifications = $derived(page.data.collection?.sample_type === 'video');
 
     const collectionId = page.params.collection_id!;
-    const tracking = useExportTracking({ collectionId });
 
     let exportType = $state<ExportType>('samples');
 
-    let prevIsDialogOpen = $state(false);
     $effect(() => {
-        const isOpen = $isExportDialogOpen;
-        if (isOpen) {
-            const defaultExportType = getDefaultExportType(page.data.collection?.sample_type);
-            exportType = defaultExportType;
-            if (!prevIsDialogOpen) {
-                tracking.trackDialogDefaultFormatSet(defaultExportType);
-            }
+        if ($isExportDialogOpen) {
+            exportType = getDefaultExportType(page.data.collection?.sample_type);
         }
-        prevIsDialogOpen = isOpen;
     });
 
     const exportOptions = $derived(getExportOptions(page.data.collection?.sample_type));
@@ -58,10 +49,7 @@
 
 <Dialog.Root
     open={$isExportDialogOpen}
-    onOpenChange={(open) =>
-        open
-            ? openExportDialog({ collectionId })
-            : closeExportDialog({ collectionId, exportFormat: exportType })}
+    onOpenChange={(open) => (open ? openExportDialog() : closeExportDialog())}
 >
     <Dialog.Portal>
         <Dialog.Overlay />
@@ -84,11 +72,8 @@
                             triggerLabel={exportTypeTriggerContent}
                             class="w-full"
                             testId="export-type-select"
-                            onOpenChange={(open) =>
-                                open && tracking.trackFormatSelectOpened(exportType)}
                             onValueChange={(v) => {
                                 exportType = v as typeof exportType;
-                                tracking.trackFormatSelected(v);
                             }}
                         >
                             {#snippet children()}
@@ -102,10 +87,7 @@
                     </FormField>
 
                     <Tabs.Content value="samples" class="pt-0">
-                        <SamplesTab
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
-                        />
+                        <SamplesTab />
                     </Tabs.Content>
 
                     <Tabs.Content value="classifications" class="pt-0">
@@ -116,8 +98,6 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-classifications"
                             sampleType={supportsVideoClassifications ? 'video' : 'image'}
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
                         />
                     </Tabs.Content>
 
@@ -129,8 +109,6 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-annotations-coco"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
                         />
                     </Tabs.Content>
 
@@ -142,8 +120,6 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-annotations-yolo"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
                         />
                     </Tabs.Content>
 
@@ -155,8 +131,6 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-instance-segmentations"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
                         />
                     </Tabs.Content>
 
@@ -168,16 +142,11 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-semantic-segmentations"
                             sampleType="image"
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
                         />
                     </Tabs.Content>
 
                     <Tabs.Content value="captions" class="pt-0">
-                        <CaptionsTab
-                            onDownloadClick={() =>
-                                tracking.handleAnnotationDownloadClick(exportType)}
-                        />
+                        <CaptionsTab />
                     </Tabs.Content>
 
                     <Tabs.Content value="prepare_coco" class="pt-0">
@@ -189,10 +158,7 @@
 
                     {#if isVideoCollection}
                         <Tabs.Content value="youtube_vis_segmentation" class="pt-0">
-                            <YoutubeVisTab
-                                onDownloadClick={() =>
-                                    tracking.handleAnnotationDownloadClick(exportType)}
-                            />
+                            <YoutubeVisTab />
                         </Tabs.Content>
                     {/if}
                 </Tabs.Root>

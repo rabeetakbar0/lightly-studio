@@ -1,16 +1,9 @@
 <script lang="ts">
-    import { useGlobalStorage, usePostHog, useVideoOrderBy } from '$lib/hooks';
+    import { useGlobalStorage, useVideoOrderBy } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
     import OrderByControl from './OrderByControl.svelte';
 
-    interface Props {
-        collectionId: string;
-    }
-
-    const { collectionId }: Props = $props();
-
     const { textEmbedding } = useGlobalStorage();
-    const { trackEvent } = usePostHog();
     const isSimilaritySearchActive = $derived(!!$textEmbedding);
 
     const {
@@ -20,7 +13,7 @@
         isFieldSelected,
         handleFieldClick,
         toggleDirection
-    } = useVideoOrderBy({ collectionId: () => collectionId });
+    } = useVideoOrderBy();
 
     const selectValue = $derived.by(() => {
         const idx = $allSortFields.findIndex((field) => $isFieldSelected(field));
@@ -54,6 +47,5 @@
     disabled={isSimilaritySearchActive}
     allowDeselect
     onValueChange={handleValueChange}
-    onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
     onToggleDirection={toggleDirection}
 />

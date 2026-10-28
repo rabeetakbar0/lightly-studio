@@ -19,7 +19,6 @@
     import { useDeleteImages } from '$lib/hooks/useDeleteImages/useDeleteImages.svelte';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
-    import { usePostHog } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
@@ -58,7 +57,6 @@
             : $selectedSampleIds
     );
 
-    const { trackEvent } = usePostHog();
     const { user } = useAuth();
     const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
 
@@ -102,20 +100,6 @@
 
     async function handleAssign(name: string) {
         assignBusy = true;
-        const snapshotCount = selectedIds.size;
-
-        function trackTagged(isNewTag: boolean) {
-            try {
-                trackEvent('samples_tagged', {
-                    collection_id,
-                    grid_type: gridType,
-                    sample_count: snapshotCount,
-                    is_new_tag: isNewTag
-                });
-            } catch (e) {
-                console.error('Failed to track samples_tagged event', e);
-            }
-        }
 
         try {
             const existingTag = $tags.find(
@@ -127,7 +111,6 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
-                trackTagged(false);
             } else {
                 const createResponse = await createTag({
                     path: { collection_id },
@@ -142,7 +125,6 @@
                     toast.error('Failed to assign tag. Please try again.');
                     return;
                 }
-                trackTagged(true);
             }
             loadTags();
         } catch (error) {

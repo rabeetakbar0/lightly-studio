@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => {
                         }
                         // Split monaco-editor into its own chunk so it stays lazy (only the
                         // dynamically imported QueryEditorPanel pulls it) instead of riding the
-                        // eager `vendor` chunk that posthog-js keeps on every route.
+                        // eager `vendor` chunk loaded on every route.
                         if (id.includes('node_modules/monaco-editor')) {
                             return 'vendor-monaco';
                         }

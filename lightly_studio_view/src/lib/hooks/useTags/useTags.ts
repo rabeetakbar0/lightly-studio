@@ -2,7 +2,6 @@ import type { TagView as Tag } from '$lib/services/types';
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
 import { readTags } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '../useGlobalStorage';
-import { usePostHog } from '$lib/hooks';
 import { toggleTagSelection } from './toggleTagSelection';
 
 interface UseTagsOptions {
@@ -28,7 +27,6 @@ const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 export function useTags(options: UseTagsOptions): UseTagsReturn {
     const { collection_id, autoLoad = true } = options;
     const { tags: tagsData } = useGlobalStorage();
-    const { trackEvent } = usePostHog();
     const isLoaded = writable(false);
     const error = writable<Error | null>(null);
     const isLoading = writable(false);
@@ -101,14 +99,12 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
             tagId: tag_id,
             collectionId: collection_id,
             currentSelected: get(tagsSelectedByCollection)[collection_id] ?? new Set<string>(),
-            allTags: get(tagsData)[collection_id] ?? [],
             updateSelected: (collectionId, newSelected) => {
                 tagsSelectedByCollection.update((selectedByCollection) => ({
                     ...selectedByCollection,
                     [collectionId]: newSelected
                 }));
-            },
-            trackEvent
+            }
         });
     };
 

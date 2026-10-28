@@ -11,11 +11,6 @@ vi.mock('svelte-sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn() }
 }));
 
-const mockTrackEvent = vi.fn();
-vi.mock('$lib/hooks', () => ({
-    usePostHog: () => ({ trackEvent: mockTrackEvent })
-}));
-
 const { toast } = await import('svelte-sonner');
 
 describe('useSubmitCombinationSelection', () => {
@@ -23,8 +18,7 @@ describe('useSubmitCombinationSelection', () => {
         tags: writable([]),
         setTagSelected: vi.fn(),
         loadTags: vi.fn().mockResolvedValue(undefined),
-        closeSelectionDialog: vi.fn(),
-        filteredSampleCount: writable(100)
+        closeSelectionDialog: vi.fn()
     };
 
     const defaultSubmitParams = {
@@ -101,14 +95,6 @@ describe('useSubmitCombinationSelection', () => {
             })
         ).toBe(false);
         expect(createSampling).not.toHaveBeenCalled();
-        expect(mockTrackEvent).toHaveBeenCalledWith('sampling_triggered', {
-            collection_id: 'col-1',
-            strategies: ['similarity'],
-            n_samples: 10,
-            filtered_sample_count: 100,
-            success: false,
-            error_message: 'Similarity is only available for image collections.'
-        });
         expect(toast.error).toHaveBeenCalledWith(
             'Similarity is only available for image collections.'
         );
@@ -228,45 +214,6 @@ describe('useSubmitCombinationSelection', () => {
         resolveApi({ data: {}, error: null });
         expect(await call).toBe(true);
         expect(get(isSubmitting)).toBe(false);
-    });
-
-    it('tracks sampling_submitted with filteredSampleCount from params', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-        const filteredSampleCount = writable(42);
-
-        const { submit } = useSubmitCombinationSelection({
-            ...defaultHookParams,
-            filteredSampleCount
-        });
-        await submit({ ...defaultSubmitParams });
-
-        expect(mockTrackEvent).toHaveBeenCalledWith(
-            'sampling_submitted',
-            expect.objectContaining({ filtered_sample_count: 42 })
-        );
-    });
-
-    it('tracks sampling_triggered with success: true before closing the dialog', async () => {
-        vi.mocked(createSampling).mockResolvedValue({ data: {}, error: null } as never);
-        const closeSelectionDialog = vi.fn();
-        const callOrder: string[] = [];
-
-        mockTrackEvent.mockImplementation((event: string) => {
-            if (event === 'sampling_triggered') callOrder.push('track');
-        });
-        closeSelectionDialog.mockImplementation(() => callOrder.push('close'));
-
-        const { submit } = useSubmitCombinationSelection({
-            ...defaultHookParams,
-            closeSelectionDialog
-        });
-        await submit({ ...defaultSubmitParams });
-
-        expect(mockTrackEvent).toHaveBeenCalledWith(
-            'sampling_triggered',
-            expect.objectContaining({ success: true })
-        );
-        expect(callOrder).toEqual(['track', 'close']);
     });
 
     it('concurrent submit guard: second call while submitting returns false immediately', async () => {

@@ -1,6 +1,5 @@
 <script lang="ts">
     import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
-    import { page } from '$app/state';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
@@ -8,8 +7,6 @@
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { useDeleteAllImagesDialog } from '$lib/hooks/useDeleteAllImagesDialog/useDeleteAllImagesDialog';
-    import { get } from 'svelte/store';
-    import { useGlobalStorage } from '$lib/hooks';
     import {
         Split as SplitIcon,
         Puzzle as PuzzleIcon,
@@ -51,7 +48,6 @@
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
     const { openSamplingDialog } = useSamplingDialog();
-    const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -89,11 +85,7 @@
             label: 'Sampling',
             icon: WandSparklesIcon,
             testId: 'menu-sampling',
-            onSelect: () =>
-                openSamplingDialog({
-                    collection_id: page.params.collection_id!,
-                    filtered_sample_count: get(filteredSampleCount)
-                })
+            onSelect: () => openSamplingDialog()
         });
 
         addAction(
@@ -121,7 +113,7 @@
             label: 'Export',
             icon: DownloadIcon,
             testId: 'menu-export',
-            onSelect: () => openExportDialog({ collectionId: collection.collection_id })
+            onSelect: () => openExportDialog()
         });
 
         addAction(items, isEditor, {

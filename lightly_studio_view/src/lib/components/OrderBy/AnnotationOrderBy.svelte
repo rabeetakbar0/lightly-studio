@@ -5,7 +5,6 @@
         useEvaluationRuns,
         useGlobalStorage,
         useHasEmbeddings,
-        usePostHog,
         useRecomputeEvaluationRun
     } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
@@ -28,7 +27,6 @@
     const { collectionId, datasetId }: Props = $props();
 
     const { textEmbedding } = useGlobalStorage();
-    const { trackEvent } = usePostHog();
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     // Similarity ordering keeps precedence over metric sorting, so the control is disabled while
     // a search applies to this source. A search started elsewhere persists but cannot be applied
@@ -92,7 +90,6 @@
         disabled={isSimilaritySearchActive}
         allowDeselect
         onValueChange={handleValueChange}
-        onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
         onToggleDirection={toggleDirection}
     />
 

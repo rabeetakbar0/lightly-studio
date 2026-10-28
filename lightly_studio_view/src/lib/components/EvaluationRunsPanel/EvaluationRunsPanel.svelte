@@ -1,7 +1,6 @@
 <script lang="ts">
     import { ArrowLeft, Plus, X } from '@lucide/svelte';
     import { Button, Spinner, Typography } from '$lib/components';
-    import { usePostHog } from '$lib/hooks';
 
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
     import TriggerEvaluationDialog from './TriggerEvaluationDialog/TriggerEvaluationDialog.svelte';
@@ -31,8 +30,6 @@
         collectionId
     }: Props = $props();
 
-    const { trackEvent } = usePostHog();
-
     const canTrigger = $derived(!!datasetId && !!collectionId);
     let dialogOpen = $state(false);
 
@@ -42,12 +39,6 @@
     );
     const visibleRuns = $derived(expandedRun ? [expandedRun] : evaluationRuns);
     const toggleExpand = (runId: string) => {
-        if (expandedRunId !== runId && collectionId) {
-            trackEvent('model_evaluation_opened', {
-                collection_id: collectionId,
-                evaluation_run_id: runId
-            });
-        }
         expandedRunId = expandedRunId === runId ? null : runId;
     };
     const collapseExpanded = () => {

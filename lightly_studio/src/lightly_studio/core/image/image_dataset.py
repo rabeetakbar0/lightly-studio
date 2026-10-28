@@ -24,8 +24,6 @@ from labelformat.model.object_detection import (
 )
 from sqlmodel import Session
 
-from lightly_studio.analytics import ingest_tracking
-from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
@@ -159,7 +157,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 greater than 0.
             AllInputFilesFailedError: If every image in the path is missing or broken.
         """
-        source = ingest_tracking.get_source(path=path)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
@@ -201,9 +198,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.FOLDER
-        )
 
     def add_annotations_from_labelformat(
         self,
@@ -369,7 +363,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
-        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         images_path = Path(images_path).absolute()
 
@@ -394,9 +387,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             root_collection_id=self.collection_id,
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
-        )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.LABELFORMAT
         )
 
     def add_samples_from_yolo(  # noqa: PLR0913
@@ -432,7 +422,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             ValueError: If tag_depth is negative, or if limit is not None and not greater
                 than 0.
         """
-        source = ingest_tracking.get_source(path=data_yaml)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
@@ -504,9 +493,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
         )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.YOLO
-        )
 
     def add_samples_from_coco(  # noqa: PLR0913
         self,
@@ -545,7 +531,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             ValueError: If tag_depth is negative, or if limit is not None and not greater
                 than 0.
         """
-        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
@@ -597,9 +582,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
         )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO
-        )
 
     def add_samples_from_pascal_voc_segmentations(  # noqa: PLR0913
         self,
@@ -633,7 +615,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
-        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         images_path = _normalize_input_path(path=images_path)
         masks_path = _normalize_input_path(path=masks_path)
@@ -668,9 +649,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             tag=split,
             embed=embed,
         )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.PASCAL_VOC
-        )
 
     def add_samples_from_lightly(  # noqa: PLR0913
         self,
@@ -700,7 +678,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
-        source = ingest_tracking.get_source(path=input_folder)
         fsspec_lister.validate_limit(limit)
         input_folder = Path(input_folder).absolute()
 
@@ -732,9 +709,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_collection_name=annotation_source,
             embed=embed_annotations,
         )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.LIGHTLY
-        )
 
     def add_samples_from_coco_caption(
         self,
@@ -758,7 +732,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
-        source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
         images_path = Path(images_path).absolute()
@@ -780,9 +753,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
-        )
-        ingest_tracking.track_samples_ingested(
-            source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO_CAPTION
         )
 
     def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:

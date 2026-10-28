@@ -503,7 +503,7 @@ describe('useSegmentationMaskBrush', () => {
         const actions = get(reversibleActions);
         await executeReversibleAction(actions[0].id);
 
-        expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id', 'segmentation_mask');
+        expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id');
         expect(get(reversibleActions)).toHaveLength(0);
         expect(annotationLabelContext.annotationId).toBeNull();
     });

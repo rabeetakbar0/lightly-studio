@@ -18,7 +18,6 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
     import { onDestroy, onMount } from 'svelte';
-    import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
@@ -75,7 +74,6 @@
     import {
         useSelectionSummary,
         useImageAnnotationCounts,
-        usePostHog,
         useFeatureFlags,
         useSeedAnnotationSourceFilter
     } from '$lib/hooks';
@@ -98,7 +96,6 @@
         globalStorage: { setLastGridType, clearSelectedSamples, clearSelectedSampleAnnotationCrops }
     } = $derived(data);
 
-    const { trackEvent } = usePostHog();
     const { featureFlags, ready: featureFlagsReady } = useFeatureFlags();
     let featuresLoaded = $state(false);
     const onboardingEnabled = $derived(
@@ -250,15 +247,6 @@
             search.onError(message);
         }
     }
-
-    afterNavigate(() => {
-        trackEvent('collection_opened', {
-            dataset_id: collection.dataset_id,
-            collection_id: collection.collection_id,
-            collection_type: `${collection.sample_type}s`,
-            sample_count: collection.total_sample_count
-        });
-    });
 
     // Setup event handlers for keyboard shortcuts
     onMount(() => {
@@ -516,7 +504,7 @@
     // Clicking a class bar toggles the same annotation-label filter as the
     // sidebar's LabelsMenu, so the plot and sidebar stay in sync.
     const handleClassBarClick = (item: CategoryCount) => {
-        toggleAnnotationFilterSelection(item.label, collectionId);
+        toggleAnnotationFilterSelection(item.label);
     };
 
     const distributionPanelVisible = $derived(
@@ -538,33 +526,13 @@
             ...$categoricalMetadataValues,
             [metadataKey]: next
         });
-        trackEvent('metadata_filter_changed', {
-            collection_id: collectionId,
-            field_name: metadataKey,
-            action: exists ? 'value_disabled' : 'value_enabled'
-        });
     };
 
     const clearCategoricalValues = (metadataKey: string) => {
         const next = { ...$categoricalMetadataValues };
         delete next[metadataKey];
         updateCategoricalMetadataValues(next);
-        trackEvent('metadata_filter_changed', {
-            collection_id: collectionId,
-            field_name: metadataKey,
-            action: 'values_cleared'
-        });
     };
-
-    function handleCombinedMetadataFilterChanged(fieldName: string, min: number, max: number) {
-        trackEvent('metadata_filter_changed', {
-            collection_id: collectionId,
-            field_name: fieldName,
-            action: 'range_changed',
-            min,
-            max
-        });
-    }
 </script>
 
 <div class="flex-none">
@@ -673,7 +641,7 @@
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
-                                        toggleAnnotationFilterSelection(label, collectionId)}
+                                        toggleAnnotationFilterSelection(label)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                 />
                             {/if}
@@ -697,7 +665,6 @@
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
-                                        onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
                                 {/key}
                             {/if}
@@ -846,7 +813,6 @@
             {#if isCollectionGrid && (supportsDistribution || hasMediaWithEmbeddings)}
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
-                        {collectionId}
                         {isImages}
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}

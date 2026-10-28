@@ -179,11 +179,10 @@ def test_register_exception_handlers__not_found_error_handler_reports_error(
 
 
 def test_register_exception_handlers__unhandled_exception_handler(
-    app_with_exception_handlers: FastAPI, mocker: MockerFixture
+    app_with_exception_handlers: FastAPI,
 ) -> None:
     """Test the catch-all exception handler."""
     path = "/test-unhandled-exception"
-    mock_track = mocker.patch("lightly_studio.analytics.tracking.track_exception")
     # raise_server_exceptions=False so TestClient returns the 500 response instead of
     # re-raising the RuntimeError that ServerErrorMiddleware passes through.
     client = TestClient(app_with_exception_handlers, raise_server_exceptions=False)
@@ -196,4 +195,3 @@ def test_register_exception_handlers__unhandled_exception_handler(
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
     assert response.json() == {"error": "Internal server error."}
-    mock_track.assert_called_once()

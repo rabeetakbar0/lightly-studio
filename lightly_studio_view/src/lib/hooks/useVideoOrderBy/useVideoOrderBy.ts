@@ -1,12 +1,8 @@
 import { derived, get, type Readable } from 'svelte/store';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type { VideoSortFieldExpr } from '$lib/api/lightly_studio_local';
-import { usePostHog, useVideoFilters, useVideoSortFields } from '$lib/hooks';
+import { useVideoFilters, useVideoSortFields } from '$lib/hooks';
 import type { SortField } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
-
-interface UseVideoOrderByParams {
-    collectionId: () => string;
-}
 
 interface UseVideoOrderByReturn {
     allSortFields: Readable<SortField[]>;
@@ -22,17 +18,9 @@ function checkIsFieldSelected(field: SortField, current: VideoSortFieldExpr | un
     return current.field_name === field.value && current.source === field.source;
 }
 
-function sortExprAnalytics(expr: VideoSortFieldExpr): { sort_source: string; field_name: string } {
-    return {
-        sort_source: expr.source === 'metadata' ? 'metadata_field' : 'video_field',
-        field_name: expr.field_name
-    };
-}
-
-export function useVideoOrderBy({ collectionId }: UseVideoOrderByParams): UseVideoOrderByReturn {
+export function useVideoOrderBy(): UseVideoOrderByReturn {
     const { videoSortBy, updateSortBy } = useVideoFilters();
     const { allSortFields } = useVideoSortFields();
-    const { trackEvent } = usePostHog();
 
     const selectedDirection = derived(
         videoSortBy,
@@ -74,13 +62,6 @@ export function useVideoOrderBy({ collectionId }: UseVideoOrderByParams): UseVid
             direction
         };
         updateSortBy([next]);
-        const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source,
-            field_name,
-            direction
-        });
     }
 
     function toggleDirection() {
@@ -90,13 +71,6 @@ export function useVideoOrderBy({ collectionId }: UseVideoOrderByParams): UseVid
             get(selectedDirection) === SortDirection.ASC ? SortDirection.DESC : SortDirection.ASC;
         const next: VideoSortFieldExpr = { ...current, direction };
         updateSortBy([next]);
-        const { sort_source, field_name } = sortExprAnalytics(next);
-        trackEvent('grid_sorted', {
-            collection_id: collectionId(),
-            sort_source,
-            field_name,
-            direction
-        });
     }
 
     return {
