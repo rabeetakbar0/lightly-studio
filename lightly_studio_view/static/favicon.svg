@@ -1,12 +1,7 @@
-<svg width="800" height="800" viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="800" height="800" rx="88" fill="url(#paint0_linear_111_16)"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M200.008 229.098H247.768V576.85H597.012V624.61H200.008V229.098Z" fill="white"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M304.467 175.39H352.227V470.905H492.522V518.665H304.467V175.39Z" fill="white"/>
-<path fill-rule="evenodd" clip-rule="evenodd" d="M599.992 518.655H552.232V273.885H411.937V226.125H599.992V518.655Z" fill="white"/>
-<defs>
-<linearGradient id="paint0_linear_111_16" x1="47.3892" y1="0" x2="47.3892" y2="800" gradientUnits="userSpaceOnUse">
-<stop stop-color="#90E0FF"/>
-<stop offset="0.961538" stop-color="#13A6E6"/>
-</linearGradient>
-</defs>
+<svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+<rect width="32" height="32" rx="7" fill="#0f1420"/>
+<circle cx="16" cy="17" r="7.5" fill="none" stroke="#e8edf5" stroke-width="2"/>
+<circle cx="16" cy="17" r="3" fill="#e8edf5"/>
+<path d="M4 25 L28 9" stroke="#f5a524" stroke-width="3.2" stroke-linecap="round"/>
+<path d="M9.5 21.3 L12.5 19.3 M15.5 17.3 L18.5 15.3 M21.5 13.3 L24.5 11.3" stroke="#0f1420" stroke-width="3.2" stroke-linecap="round"/>
 </svg>

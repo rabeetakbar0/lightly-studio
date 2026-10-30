@@ -56,10 +56,6 @@ describe('BarChart', () => {
         expect(emptyState).toHaveTextContent(
             'Add annotations or metadata to see their distribution.'
         );
-        expect(screen.getByRole('link', { name: 'documentation' })).toHaveAttribute(
-            'href',
-            'https://docs.lightly.ai/studio/'
-        );
     });
 
     it('renders a custom emptyState snippet instead of the default message', () => {

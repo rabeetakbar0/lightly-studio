@@ -6,8 +6,14 @@
         usePipelineDatasetActions,
         usePipelineDatasets
     } from '$lib/hooks/usePipelineDatasets/usePipelineDatasets.svelte';
+    import {
+        useTrainingActions,
+        useTrainingOptions
+    } from '$lib/hooks/usePipelineTraining/usePipelineTraining.svelte';
     import DatasetRow from './DatasetRow.svelte';
     import MergeDatasetsDialog from './MergeDatasetsDialog.svelte';
+    import RunsSection from './RunsSection.svelte';
+    import TrainModelDialog from './TrainModelDialog.svelte';
 
     interface Props {
         onClose: () => void;
@@ -16,13 +22,20 @@
 
     const query = usePipelineDatasets();
     const { mergeMutation, deleteMutation, preview, merge, remove } = usePipelineDatasetActions();
+    const options = useTrainingOptions();
+    const { startMutation, start } = useTrainingActions();
     const datasets = $derived(query.data ?? []);
+    const datasetNames = $derived(datasets.map((d) => d.name));
 
     let mergeOpen = $state(false);
+    let trainOpen = $state(false);
     let toDelete = $state<string | null>(null);
 
     $effect(() => {
         if (!mergeMutation.isPending && mergeMutation.isSuccess) mergeOpen = false;
+    });
+    $effect(() => {
+        if (!startMutation.isPending && startMutation.isSuccess) trainOpen = false;
     });
     $effect(() => {
         if (!deleteMutation.isPending && deleteMutation.isSuccess) toDelete = null;
@@ -40,7 +53,7 @@
     </div>
     <p class="mb-3 text-sm text-muted-foreground">
         Datasets prepared with Export → "Prepare COCO dataset". Preview opens a dataset in Studio in
-        a new tab; merge combines two into a new one.
+        a new tab; merge combines two; "Train model" starts a YOLOX run on one.
     </p>
     <div class="mb-3 flex gap-2">
         <Button
@@ -58,17 +71,21 @@
         <Button
             variant="outline"
             icon={Rocket}
-            disabledReason="Model training is the next step of the pipeline and is not wired up yet."
-            buttonProps={{ size: 'sm' }}
+            disabledReason={datasets.length === 0 ? 'Prepare a dataset first.' : undefined}
+            buttonProps={{
+                size: 'sm',
+                disabled: datasets.length === 0 || !options.data,
+                onclick: () => (trainOpen = true),
+                'data-testid': 'train-model'
+            }}
         >
             Train model
         </Button>
     </div>
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">
+        <Typography variant="subtitle2" component="h3" className="mb-2">Datasets</Typography>
         {#if query.isLoading}
-            <div class="flex flex-1 items-center justify-center p-8">
-                <Spinner size="medium" align="center" />
-            </div>
+            <Spinner size="small" align="center" />
         {:else if query.error}
             <Typography variant="body2" className="text-red-500"
                 >Error loading datasets: {query.error.message}</Typography
@@ -88,15 +105,25 @@
                 {/each}
             </ul>
         {/if}
+        <RunsSection />
     </div>
 </div>
 
 {#if mergeOpen}
     <MergeDatasetsDialog
-        datasetNames={datasets.map((d) => d.name)}
+        {datasetNames}
         isPending={mergeMutation.isPending}
         onConfirm={merge}
         onCancel={() => (mergeOpen = false)}
+    />
+{/if}
+{#if trainOpen && options.data}
+    <TrainModelDialog
+        options={options.data}
+        {datasetNames}
+        isPending={startMutation.isPending}
+        onConfirm={start}
+        onCancel={() => (trainOpen = false)}
     />
 {/if}
 {#if toDelete}

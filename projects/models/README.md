@@ -14,7 +14,18 @@ models/
   yolox_m_slm_v4_classes.txt     one class name per line, in model output order
 ```
 
-Everything else in this folder is ignored (`.pth` checkpoints, notes, subfolders).
+Two more files are optional and used by the Train and Models panels:
+
+```
+  yolox_m_slm_v4.pth             the YOLOX training checkpoint; makes the model selectable
+                                 as the baseline of a new training run
+  yolox_m_slm_v4.json            the model card: dataset, settings and scores of the run that
+                                 produced it; written by the pipeline, shown in the Models panel
+```
+
+A model trained through the GUI gets all four files. For a model trained by hand, link its
+`best_ckpt.pth` here under the model's name to use it as a baseline; it has no card, so the
+Models panel shows it without history. Everything else in this folder is ignored.
 
 ## What the operator does
 

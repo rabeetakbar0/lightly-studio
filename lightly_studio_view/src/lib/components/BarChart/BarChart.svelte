@@ -155,15 +155,6 @@
         {:else}
             No distribution data to display.
             <br />Add annotations or metadata to see their distribution.
-            <br />Learn more in the
-            <a
-                href="https://docs.lightly.ai/studio/"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="text-primary underline-offset-4 hover:underline"
-            >
-                documentation
-            </a>.
         {/if}
     </div>
 {:else}

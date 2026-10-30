@@ -31,7 +31,7 @@
             <div class="mb-6 text-6xl">⚠️</div>
             <h1 class="mb-4 text-3xl font-bold text-foreground">Unable to Connect to API</h1>
             <p class="mb-6 text-lg text-muted-foreground">
-                The Lightly Studio API server is not running or is unreachable.
+                The CrossingVision API server is not running or is unreachable.
             </p>
             <div class="mb-6 rounded border-l-4 border-primary bg-muted p-4">
                 <strong class="mb-2 block text-sm text-foreground">Expected API URL:</strong>
@@ -45,7 +45,7 @@
                 <h2 class="mb-4 text-xl font-semibold text-foreground">To get started:</h2>
                 <ol class="list-decimal space-y-2 pl-6 text-foreground">
                     <li>
-                        Make sure the Lightly Studio API server is running at <code
+                        Make sure the CrossingVision API server is running at <code
                             class="rounded bg-muted px-1 py-0.5 font-mono text-sm text-muted-foreground"
                             >{$apiUrl}</code
                         >

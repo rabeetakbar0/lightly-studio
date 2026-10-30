@@ -49,15 +49,8 @@
             </p>
         {:else if $annotationFilterRows.length === 0}
             <p class="text-sm text-diffuse-foreground">
-                No annotations yet.
-                <a
-                    href="https://docs.lightly.ai/studio/workflows/annotations"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="text-primary underline-offset-4 hover:underline"
-                >
-                    Label samples directly in LightlyStudio or add annotations from code.
-                </a>
+                No annotations yet. Label samples directly in CrossingVision, run a Detect plugin,
+                or add annotations from code.
             </p>
         {:else}
             {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}

@@ -13,6 +13,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Delete every image of a tag from the tag's menu, or every image of the collection from the header menu, to start over without restarting.
 - Export → "Prepare COCO dataset" writes the images in the current view and their boxes as a training-ready COCO folder with train and validation splits, named by you.
 - The new Train panel on the right lists the prepared datasets, previews any of them in Studio in a new tab, merges two into a new dataset, and deletes them.
+- "Train model" in the Train panel trains a YOLOX model on a prepared dataset. Every setting of the training recipe can be changed in the dialog and starts at the v4 gate-arm values. Runs show their epoch, ETA, best AP and log while they train, can be stopped, and the finished model is exported to the models folder and becomes a Detect operator right away.
+- A run starts from a baseline of your choice: any model in the models folder that has its checkpoint next to it, stock COCO YOLOX weights, or nothing. Picking a baseline sets the model size.
+- The new Models panel lists every detection model with the dataset, baseline, settings and scores it was trained with. Select models to compare them side by side with differences highlighted, and start a new run from any model with its settings prefilled.
 - Python SDK: `start_gui(allow_empty=True)` starts the GUI on a dataset that has no images yet.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 

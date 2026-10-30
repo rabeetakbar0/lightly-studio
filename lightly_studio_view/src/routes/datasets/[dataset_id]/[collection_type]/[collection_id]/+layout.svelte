@@ -755,6 +755,10 @@
                                 {#await import('$lib/components/TrainPanel/TrainPanel.svelte') then { default: TrainPanel }}
                                     <TrainPanel onClose={() => setActivePanel('none')} />
                                 {/await}
+                            {:else if $activePanel === 'models' && isImages}
+                                {#await import('$lib/components/ModelsPanel/ModelsPanel.svelte') then { default: ModelsPanel }}
+                                    <ModelsPanel onClose={() => setActivePanel('none')} />
+                                {/await}
                             {:else if $activePanel === 'embeddingPlot' && hasMediaWithEmbeddings}
                                 {#await import('$lib/components/PlotPanel/PlotPanel.svelte') then { default: PlotPanel }}
                                     <!-- PlotPanel captures collectionId at mount; remount it when

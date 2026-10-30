@@ -14,7 +14,10 @@ backend and frontend modules.
 - `projects/start_studio.py`: the launcher. Opens the persistent `pipeline` dataset, registers
   one `Detect: <name>` operator per model in `projects/models/`, starts the GUI on 127.0.0.1:8001.
 - `projects/models/`: `<name>.onnx` plus `<name>_classes.txt` (one class per line, model output
-  order). Weights are gitignored. `PIPELINE_MODELS_DIR` overrides the folder.
+  order). Optional `<name>.pth` (YOLOX checkpoint; makes the model a possible baseline) and
+  `<name>.json` (model card: dataset, baseline, config, scores; written by the pipeline). Weights
+  are gitignored. `PIPELINE_MODELS_DIR` overrides the folder; `LIGHTLY_STUDIO_MODELS_DIR` is set
+  from it by the launcher. v4 and v3_1 checkpoints are symlinked from SLMmodelv2/YOLOX_outputs.
 - `projects/pipeline/`: `model_registry` (folder scan), `yolox_onnx` (letterbox, decode, NMS
   through onnxruntime), `detect_operator` (IMAGE-scope operator writing to the annotation source
   `<name>_prediction`). Tests in `projects/tests`, lint config in `projects/ruff.toml`.
@@ -24,7 +27,25 @@ backend and frontend modules.
   one folder each: `train2017/`, `val2017/`, `annotations/instances_*.json`, `dataset.json`
   manifest, `README.md`. Images are hard links with bare file names; categories are 1-based.
   `LIGHTLY_STUDIO_DATASETS_DIR` points here (set by the launcher). Gitignored.
-- Backend fork modules: `lightly_studio/src/lightly_studio/pipeline_datasets/` (`coco_dataset`:
+- `projects/runs/<name>/`: one folder per training run started from the GUI: `run.json`
+  (config, status, classes, command), `exp.py` (the generated YOLOX exp file), `log.txt`
+  (stdout of `tools/train.py`, then of the ONNX export), `train/` (YOLOX checkpoints and its
+  own log), `export/` (the ONNX file and class list, also copied to the models folder).
+  `LIGHTLY_STUDIO_RUNS_DIR` points here. Gitignored.
+- `projects/weights/`: pretrained `.pth` checkpoints a run can start from
+  (`LIGHTLY_STUDIO_WEIGHTS_DIR`). `yolox_m.pth` is a symlink into SLMmodelv2. Gitignored.
+- Training needs `LIGHTLY_STUDIO_YOLOX_DIR` (the YOLOX checkout) and
+  `LIGHTLY_STUDIO_TRAIN_PYTHON` (the interpreter with YOLOX, torch and CUDA; the SLMmodelv2
+  venv, Python 3.12) in `lightly_studio/.env`. The backend only launches subprocesses; it never
+  imports torch for training. One run at a time. The training process is a child of the
+  backend: stopping the backend kills it, and such runs show as failed after a restart.
+- Backend fork modules: `lightly_studio/src/lightly_studio/pipeline_training/` (`config`:
+  `TrainConfig` with the v4 recipe as defaults, `baseline` = `model:<name>` | `weights:<file>` |
+  null; `model_catalog`: models folder scan, checkpoints, model cards, size presets; `exp_writer`;
+  `log_metrics`: epoch/ETA/AP parser; `runs`: run folders; `runner`: subprocess start, stop,
+  export, reconcile; `export_onnx_script.py` runs under the training interpreter, excluded from
+  mypy) with routes `api/routes/api/pipeline_training.py` (`/pipeline_training/options` incl.
+  baselines, `/pipeline_training/runs...`) and `pipeline_models.py` (`GET /pipeline_models`). `lightly_studio/src/lightly_studio/pipeline_datasets/` (`coco_dataset`:
   write, merge, list, delete folders; `service`: export from a collection, preview back into
   Studio as dataset `preview:<name>`) with routes `api/routes/api/pipeline_datasets.py`.
   The landing page skips `preview:` datasets. `lightly_studio/src/lightly_studio/upload/` (frame selection, frame
@@ -32,9 +53,13 @@ backend and frontend modules.
   `media_delete.py`. `resolvers/image_resolver/delete_many_with_dependents.py` is the ordered
   DuckDB cascade for image samples.
 - Frontend fork modules: `lib/components/MediaDropZone`, `ConfirmDeleteDialog`,
-  `DeleteAllImagesDialog`, `TrainPanel` (right side panel tab "Train": list, preview, merge,
-  delete datasets; training itself is not wired yet), `ExportSamples/PrepareDatasetTab`; hooks
-  `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`, `usePipelineDatasets`.
+  `DeleteAllImagesDialog`, `TrainPanel` (right side panel tab "Train": datasets list, preview, merge,
+  delete; `TrainModelDialog` with one tab per parameter group driven by `trainFields.ts`;
+  `RunsSection`, `RunRow`, `RunLogDialog` polling active runs), `ModelsPanel` (side panel tab
+  "Models": `ModelRow`, `CompareModelsDialog` over `compareRows.ts`, "Train from" opens
+  `TrainModelDialog` with `initialConfig`), `ExportSamples/PrepareDatasetTab`; hooks
+  `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`, `usePipelineDatasets`,
+  `usePipelineTraining`, `usePipelineModels`.
 
 ## Running
 

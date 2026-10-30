@@ -43,7 +43,7 @@ def start_gui(
     server = Server(host=host, port=port)
     uvicorn_server = server.create_uvicorn_server()
 
-    logger.info(f"Open the LightlyStudio GUI under: {server.url}")
+    logger.info(f"Open the CrossingVision GUI under: {server.url}")
 
     if open_browser:
         threading.Thread(
@@ -57,7 +57,7 @@ def start_gui(
         _run_uvicorn_server(uvicorn_server)
     except KeyboardInterrupt:
         # Uvicorn shuts down gracefully on Ctrl+C and then raises the captured SIGINT again
-        logger.info("LightlyStudio GUI stopped.")
+        logger.info("CrossingVision GUI stopped.")
     return server
 
 
@@ -113,7 +113,7 @@ def start_gui_background(
     state = _GuiBackgroundState(uvicorn_server=uvicorn_server, thread=thread)
     _GUI_BACKGROUND_STATE = state
 
-    logger.info(f"Open the LightlyStudio GUI under: {server.url}")
+    logger.info(f"Open the CrossingVision GUI under: {server.url}")
 
     thread.start()
     # TODO(Malte, 01/26): Wait for server startup and surface background errors.

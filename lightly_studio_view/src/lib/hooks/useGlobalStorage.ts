@@ -121,7 +121,8 @@ export type PanelType =
     | 'evaluationRuns'
     | 'queryEditor'
     | 'distribution'
-    | 'train';
+    | 'train'
+    | 'models';
 
 const activePanel = writable<PanelType>('none');
 const showEmbeddingPlot = derived(activePanel, ($p) => $p === 'embeddingPlot');

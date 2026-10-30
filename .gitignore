@@ -39,6 +39,11 @@ projects/uploads/
 # COCO datasets prepared from the GUI (LIGHTLY_STUDIO_DATASETS_DIR).
 lightly_studio_datasets/
 projects/datasets/
+lightly_studio_runs/
+projects/runs/
+lightly_studio_models/
+lightly_studio_weights/
+projects/weights/*.pth
 
 # Crash logs of the frontend client generator.
 lightly_studio_view/openapi-ts-error-*.log

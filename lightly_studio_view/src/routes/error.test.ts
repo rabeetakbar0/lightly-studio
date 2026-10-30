@@ -37,7 +37,7 @@ describe('+error.svelte', () => {
 
             expect(screen.getByText('Unable to Connect to API')).toBeInTheDocument();
             expect(
-                screen.getByText('The Lightly Studio API server is not running or is unreachable.')
+                screen.getByText('The CrossingVision API server is not running or is unreachable.')
             ).toBeInTheDocument();
         });
 
@@ -141,7 +141,7 @@ describe('+error.svelte', () => {
 
             expect(screen.getByText('To get started:')).toBeInTheDocument();
             expect(
-                screen.getByText(/Make sure the Lightly Studio API server is running at/)
+                screen.getByText(/Make sure the CrossingVision API server is running at/)
             ).toBeInTheDocument();
             expect(
                 screen.getByText('Check that the API is accessible at the configured URL')

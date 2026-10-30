@@ -121,7 +121,7 @@
                     <div class="p-4 text-sm text-muted-foreground">
                         <p>No plugins available.</p>
                         <p class="mt-2">
-                            Extend LightlyStudio with plugins. Install ready-made plugins or build
+                            Extend CrossingVision with plugins. Install ready-made plugins or build
                             your own to ingest/export data, run model-assisted annotation, and
                             automate workflows.
                         </p>
@@ -167,16 +167,6 @@
                     {/if}
                 {/if}
             </div>
-            <Dialog.Footer class="px-4 pb-4">
-                <a
-                    href="https://docs.lightly.ai/studio/ecosystem/plugins/"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-                >
-                    Learn more about plugins →
-                </a>
-            </Dialog.Footer>
         </Dialog.Content>
     </Dialog.Portal>
 </Dialog.Root>

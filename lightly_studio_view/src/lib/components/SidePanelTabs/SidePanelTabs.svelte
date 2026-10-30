@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { ChartColumn, ChartNetwork, Dumbbell, Gauge, SearchCode } from '@lucide/svelte';
+    import { Boxes, ChartColumn, ChartNetwork, Dumbbell, Gauge, SearchCode } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 
@@ -134,6 +134,28 @@
             >
                 <Dumbbell class="size-4" />
                 <span>Train</span>
+            </button>
+        </Tooltip>
+        <Tooltip
+            content="Detection models and their training history"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
+            <button
+                class={cn(
+                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                    $activePanel === 'models'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                data-testid="side-panel-tabs-models"
+                aria-label="Models"
+                aria-pressed={$activePanel === 'models'}
+                onclick={() => toggle($activePanel, 'models')}
+            >
+                <Boxes class="size-4" />
+                <span>Models</span>
             </button>
         </Tooltip>
     {/if}

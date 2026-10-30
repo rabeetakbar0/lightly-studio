@@ -22,9 +22,15 @@ PROJECT_DIR = Path(__file__).resolve().parent
 # Environment settings are read when lightly_studio is imported, so they come first.
 os.environ.setdefault("LIGHTLY_STUDIO_UPLOAD_DIR", str(PROJECT_DIR / "uploads"))
 os.environ.setdefault("LIGHTLY_STUDIO_DATASETS_DIR", str(PROJECT_DIR / "datasets"))
+os.environ.setdefault("LIGHTLY_STUDIO_RUNS_DIR", str(PROJECT_DIR / "runs"))
+os.environ.setdefault("LIGHTLY_STUDIO_WEIGHTS_DIR", str(PROJECT_DIR / "weights"))
+os.environ.setdefault(
+    "LIGHTLY_STUDIO_MODELS_DIR", os.environ.get("PIPELINE_MODELS_DIR", str(PROJECT_DIR / "models"))
+)
 
 import lightly_studio as ls
 from lightly_studio.database import db_manager
+from lightly_studio.pipeline_training.runner import training_runner
 from lightly_studio.plugins.operator_registry import operator_registry
 
 sys.path.insert(0, str(PROJECT_DIR))
@@ -33,8 +39,20 @@ from pipeline.detect_operator import DetectOperator
 
 DATASET_NAME = os.environ.get("STUDIO_DATASET_NAME", "pipeline")
 DB_FILE = Path(os.environ.get("STUDIO_DB_FILE", PROJECT_DIR / "lightly_studio_pipeline.db"))
-MODELS_DIR = Path(os.environ.get("PIPELINE_MODELS_DIR", PROJECT_DIR / "models"))
+MODELS_DIR = Path(os.environ["LIGHTLY_STUDIO_MODELS_DIR"])
 UPLOAD_DIR = Path(os.environ["LIGHTLY_STUDIO_UPLOAD_DIR"])
+
+
+def register_exported_model(onnx_path: Path) -> None:
+    """Makes a model that a training run just exported available as a Detect operator."""
+    class_names = model_registry.read_class_names(
+        classes_path=model_registry.classes_path_for(onnx_path=onnx_path)
+    )
+    model = model_registry.DetectionModel(
+        name=onnx_path.stem, onnx_path=onnx_path, class_names=class_names
+    )
+    operator_registry.register(operator=DetectOperator(model=model))
+    print(f"Registered detection model {model.name} from the training run.")
 
 
 def reset_slate() -> None:
@@ -63,5 +81,9 @@ print(
     f"Registered {len(models)} detection models from {MODELS_DIR}: "
     f"{', '.join(m.name for m in models) or 'none'}"
 )
+
+# Training runs (GUI: Train panel) need LIGHTLY_STUDIO_YOLOX_DIR and
+# LIGHTLY_STUDIO_TRAIN_PYTHON in lightly_studio/.env; a finished run registers its model here.
+training_runner.on_model_exported = register_exported_model
 
 ls.start_gui(host="127.0.0.1", allow_empty=True)

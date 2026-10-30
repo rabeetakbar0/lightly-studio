@@ -22,6 +22,22 @@ LIGHTLY_STUDIO_UPLOAD_DIR: Path = env.path(
 LIGHTLY_STUDIO_DATASETS_DIR: Path = env.path(
     "LIGHTLY_STUDIO_DATASETS_DIR", Path.cwd() / "lightly_studio_datasets"
 )
+# Training runs started from the GUI, one folder per run.
+LIGHTLY_STUDIO_RUNS_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_RUNS_DIR", Path.cwd() / "lightly_studio_runs"
+)
+# Exported ONNX models land here, next to their class lists.
+LIGHTLY_STUDIO_MODELS_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_MODELS_DIR", Path.cwd() / "lightly_studio_models"
+)
+# Pretrained YOLOX checkpoints (.pth) that a run can start from.
+LIGHTLY_STUDIO_WEIGHTS_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_WEIGHTS_DIR", Path.cwd() / "lightly_studio_weights"
+)
+# The YOLOX checkout with tools/train.py, and the interpreter that has YOLOX and torch
+# installed. Training is off until both are set.
+LIGHTLY_STUDIO_YOLOX_DIR: Optional[Path] = env.path("LIGHTLY_STUDIO_YOLOX_DIR", default=None)
+LIGHTLY_STUDIO_TRAIN_PYTHON: Optional[str] = env.str("LIGHTLY_STUDIO_TRAIN_PYTHON", default=None)
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
 LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)

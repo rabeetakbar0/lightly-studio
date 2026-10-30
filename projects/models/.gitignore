@@ -1,6 +1,4 @@
-# Model weights stay out of git. Keep the class lists and this README.
-*.onnx
-*.pth
-*.pt
-*.data
-onnx_external/
+# Models stay out of git: weights, class lists and model cards. Keep this README.
+*
+!.gitignore
+!README.md

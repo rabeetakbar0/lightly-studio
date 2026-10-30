@@ -215,15 +215,6 @@
                 </div>
 
                 <Dialog.Footer class="mt-4">
-                    <a
-                        href="https://docs.lightly.ai/studio/workflows/sampling/"
-                        target="_blank"
-                        rel="noreferrer"
-                        class="mr-auto self-center text-xs text-muted-foreground underline-offset-4 hover:underline"
-                        data-testid="sampling-dialog-docs-link"
-                    >
-                        How do sampling combinations work?
-                    </a>
                     <Button
                         variant="outline"
                         buttonProps={{

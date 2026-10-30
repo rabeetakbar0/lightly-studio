@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { BookOpen, Mail } from '@lucide/svelte';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
     import {
@@ -63,27 +62,8 @@
                 <span class="font-medium text-foreground">{statsText}</span>
             {/if}
         </div>
-        <div class="flex items-center gap-2">
-            <a
-                class="flex items-center gap-2 text-foreground/80 transition-colors hover:text-foreground"
-                href="https://www.lightly.ai/contact"
-                target="_blank"
-                rel="noreferrer"
-            >
-                <Mail class="size-4" />
-                <span>Contact Us</span>
-            </a>
-        </div>
-        <div class="flex items-center gap-2">
-            <a
-                class="flex items-center gap-2 text-foreground/80 transition-colors hover:text-foreground"
-                href="https://docs.lightly.ai/studio/"
-                target="_blank"
-                rel="noreferrer"
-            >
-                <BookOpen class="size-4" />
-                <span>Docs</span>
-            </a>
+        <div class="flex items-center gap-2 text-foreground/60">
+            <span>CrossingVision</span>
         </div>
         <div class="flex items-center gap-2">
             <span class="text-foreground/60">

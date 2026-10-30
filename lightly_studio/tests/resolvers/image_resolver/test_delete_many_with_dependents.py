@@ -1,4 +1,5 @@
-from uuid import uuid4
+from typing import Any
+from uuid import UUID, uuid4
 
 from sqlmodel import Session, col, select
 
@@ -10,7 +11,7 @@ from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests import helpers_resolvers
 
 
-def _count(session: Session, table: type, ids: list) -> int:  # type: ignore[type-arg]
+def _count(session: Session, table: Any, ids: list[UUID]) -> int:
     return len(session.exec(select(table).where(col(table.sample_id).in_(ids))).all())
 
 

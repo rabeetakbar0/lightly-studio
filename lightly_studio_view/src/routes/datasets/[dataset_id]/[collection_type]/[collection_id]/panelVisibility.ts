@@ -11,6 +11,7 @@ export function isPanelVisible(
         (activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
         (activePanel === 'queryEditor' && isImages) ||
         (activePanel === 'distribution' && supportsDistribution) ||
-        (activePanel === 'train' && isImages)
+        (activePanel === 'train' && isImages) ||
+        (activePanel === 'models' && isImages)
     );
 }
