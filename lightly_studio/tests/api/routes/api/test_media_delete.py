@@ -12,7 +12,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.dataset import env
-from lightly_studio.resolvers import tag_resolver
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests import helpers_resolvers
 
 
@@ -43,6 +43,8 @@ def test_delete_images(db_session: Session, test_client: TestClient) -> None:
         "deleted_files": 0,
         "deleted_tag": True,
         "deleted_tags": 1,
+        "deleted_sources": 0,
+        "deleted_classes": 0,
     }
 
     response = test_client.post(
@@ -64,3 +66,39 @@ def test_delete_images__collection_not_found(test_client: TestClient) -> None:
         f"/api/collections/{uuid4()}/images/delete", json={"delete_all": True}
     )
     assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_delete_annotation_source(db_session: Session, test_client: TestClient) -> None:
+    collection_id = helpers_resolvers.create_collection(session=db_session).collection_id
+    image = helpers_resolvers.create_image(session=db_session, collection_id=collection_id)
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="GateArm"
+    )
+    helpers_resolvers.create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_collection_name="pred",
+    )
+    source_id = collection_resolver.get_by_name(
+        session=db_session, name="pred", parent_collection_id=collection_id
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/annotation_sources/delete",
+        json={"annotation_collection_id": str(source_id)},
+    )
+    assert response.status_code == HTTP_STATUS_OK, response.text
+    assert response.json() == {
+        "deleted_sources": 1,
+        "deleted_annotations": 1,
+        "deleted_evaluations": 0,
+        "deleted_classes": 1,
+    }
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/annotation_sources/delete",
+        json={"annotation_collection_id": str(source_id)},
+    )
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST

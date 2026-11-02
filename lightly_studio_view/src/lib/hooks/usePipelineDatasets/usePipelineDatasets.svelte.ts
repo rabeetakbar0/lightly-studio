@@ -1,7 +1,12 @@
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
-import type { PipelineDatasetView } from '$lib/api/lightly_studio_local';
+import type {
+    BuildTestDatasetRequest,
+    PipelineDatasetView,
+    SplitInfoView
+} from '$lib/api/lightly_studio_local';
 import {
+    buildTestDatasetMutation,
     deletePipelineDatasetMutation,
     exportPipelineDatasetMutation,
     listPipelineDatasetsOptions,
@@ -11,6 +16,17 @@ import {
 import { apiErrorMessage } from '$lib/hooks/useMediaUpload/useMediaUpload.helpers';
 
 const LIST_KEY = [{ _id: 'listPipelineDatasets' }];
+const TEST_DATASETS_KEY = [{ _id: 'listTestDatasets' }];
+
+/** ", hold-outs spread over 12 groups" or the random fallback note, for toasts and rows. */
+export const splitSummary = (split: SplitInfoView | null | undefined): string => {
+    if (!split) return '';
+    const parts: string[] = [];
+    if (split.groups > 0) parts.push(`hold-outs spread over ${split.groups} groups`);
+    if (split.fallback_images > 0)
+        parts.push(`${split.fallback_images} images without embeddings split at random`);
+    return parts.length ? `, ${parts.join(', ')}` : '';
+};
 
 /** The prepared training datasets, newest first. */
 export const usePipelineDatasets = () => createQuery(() => listPipelineDatasetsOptions());
@@ -31,7 +47,10 @@ export const formatBytes = (bytes: number): string => {
 /** Mutations over the datasets folder; every success refreshes the list. */
 export const usePipelineDatasetActions = () => {
     const client = useQueryClient();
-    const refresh = () => client.invalidateQueries({ queryKey: LIST_KEY });
+    const refresh = () => {
+        client.invalidateQueries({ queryKey: LIST_KEY });
+        client.invalidateQueries({ queryKey: TEST_DATASETS_KEY });
+    };
     const onError = (fallback: string) => (error: unknown) =>
         toast.error(apiErrorMessage(error, fallback));
 
@@ -39,9 +58,21 @@ export const usePipelineDatasetActions = () => {
         ...exportPipelineDatasetMutation(),
         onSuccess: (result: PipelineDatasetView) => {
             refresh();
-            toast.success(`Dataset "${result.name}" prepared with ${result.images} images`);
+            toast.success(
+                `Dataset "${result.name}" prepared with ${result.images} images${splitSummary(result.split)}`
+            );
         },
         onError: onError('Preparing the dataset failed')
+    }));
+    const buildTestMutation = createMutation(() => ({
+        ...buildTestDatasetMutation(),
+        onSuccess: (result: PipelineDatasetView) => {
+            refresh();
+            toast.success(
+                `Test dataset "${result.name}" built with ${result.images} images${splitSummary(result.split)}`
+            );
+        },
+        onError: onError('Building the test dataset failed')
     }));
     const mergeMutation = createMutation(() => ({
         ...mergePipelineDatasetsMutation(),
@@ -83,6 +114,8 @@ export const usePipelineDatasetActions = () => {
 
     return {
         exportMutation,
+        buildTestMutation,
+        buildTest: (body: BuildTestDatasetRequest) => buildTestMutation.mutate({ body }),
         mergeMutation,
         previewMutation,
         deleteMutation,

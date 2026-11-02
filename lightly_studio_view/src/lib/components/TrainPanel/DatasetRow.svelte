@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { PipelineDatasetView } from '$lib/api/lightly_studio_local';
     import { Button, Typography } from '$lib/components';
+    import { Badge } from '$lib/components/ui/badge';
     import { Eye, Trash2 } from '@lucide/svelte';
     import { formatDate } from '$lib/utils';
     import { formatBytes } from '$lib/hooks/usePipelineDatasets/usePipelineDatasets.svelte';
@@ -22,7 +23,12 @@
 <li class="rounded-md border border-border bg-background p-3" data-testid="dataset-row">
     <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
-            <Typography variant="subtitle2" className="truncate">{dataset.name}</Typography>
+            <div class="flex items-center gap-2">
+                <Typography variant="subtitle2" className="truncate">{dataset.name}</Typography>
+                {#if dataset.kind === 'test'}
+                    <Badge variant="outline">test set</Badge>
+                {/if}
+            </div>
             <Typography variant="caption" className="text-muted-foreground">
                 {dataset.images} images · {dataset.boxes} boxes · {splits} · {formatBytes(
                     dataset.size_bytes
@@ -30,12 +36,17 @@
             </Typography>
             <Typography variant="caption" className="block text-muted-foreground">
                 {dataset.classes.join(', ') || 'no classes'}
-                {#if dataset.sources.length > 0}
+                {#if dataset.kind === 'test' && dataset.sources.length > 0}
+                    · drawn from {dataset.sources.join(' + ')}
+                {:else if dataset.sources.length > 0}
                     · merged from {dataset.sources.join(' + ')}
                 {:else if dataset.annotation_source}
                     · from "{dataset.annotation_source}"
                 {/if}
                 · {formatDate(new Date(dataset.created_at))}
+                {#if dataset.split && dataset.split.groups > 0}
+                    · spread over {dataset.split.groups} groups
+                {/if}
             </Typography>
         </div>
         <div class="flex shrink-0 gap-1">

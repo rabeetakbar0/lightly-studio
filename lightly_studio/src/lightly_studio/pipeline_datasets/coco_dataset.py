@@ -19,7 +19,6 @@ from __future__ import annotations
 import datetime as dt
 import json
 import os
-import random
 import re
 import shutil
 from collections import defaultdict
@@ -27,13 +26,19 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from lightly_studio.pipeline_datasets import val_split
+from lightly_studio.pipeline_datasets.val_split import GroupCounts, Split, SplitInfo
+
 TRAIN_SPLIT = "train2017"
 VAL_SPLIT = "val2017"
-SPLITS = (TRAIN_SPLIT, VAL_SPLIT)
+TEST_SPLIT = "test2017"
+SPLITS = (TRAIN_SPLIT, VAL_SPLIT, TEST_SPLIT)
+HOLDOUT_SPLIT = {val_split.HOLDOUT_VAL: VAL_SPLIT, val_split.HOLDOUT_TEST: TEST_SPLIT}
+KIND_TRAIN = "train"
+KIND_TEST = "test"
 MANIFEST_FILE = "dataset.json"
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
 _MIN_SOURCES = 2
-_MIN_IMAGES_FOR_SPLIT = 2
 _LICENSES = [{"id": 1, "name": "unknown", "url": ""}]
 
 
@@ -52,6 +57,7 @@ class ImageRecord:
     width: int
     height: int
     tag: str = ""
+    sample_id: str = ""
 
 
 @dataclass(frozen=True)
@@ -80,6 +86,50 @@ class SplitSummary:
     boxes: int = 0
 
 
+@dataclass(frozen=True)
+class PoolImage:
+    """One image of an existing dataset, ready to be copied into a new one.
+
+    Attributes:
+        source_dir: The dataset folder it comes from.
+        split: The split folder inside that dataset.
+        image: Its COCO image entry.
+        annotations: Its COCO annotations.
+        category_names: The source's category id to name.
+    """
+
+    source_dir: Path
+    split: str
+    image: dict[str, Any]
+    annotations: tuple[dict[str, Any], ...]
+    category_names: dict[int, str]
+
+    @property
+    def file_name(self) -> str:
+        """The bare file name."""
+        return str(self.image["file_name"])
+
+    @property
+    def sample_id(self) -> str:
+        """The LightlyStudio sample the image was exported from, "" when unknown."""
+        return str(self.image.get("sample_id", ""))
+
+
+@dataclass
+class ImagePool:
+    """All images of some datasets, every file name once.
+
+    Attributes:
+        images: The images, sources in the given order, first occurrence of a name wins.
+        class_names: Union of the sources' classes in first-appearance order.
+        sources: The dataset names.
+    """
+
+    images: list[PoolImage] = field(default_factory=list)
+    class_names: list[str] = field(default_factory=list)
+    sources: list[str] = field(default_factory=list)
+
+
 @dataclass
 class DatasetSummary:
     """What the GUI shows about a dataset folder.
@@ -93,6 +143,8 @@ class DatasetSummary:
         sources: Datasets this one was merged from, empty for an export.
         annotation_source: The LightlyStudio annotation source it was exported from.
         size_bytes: Size of the image files on disk, counting hard links once per dataset.
+        kind: "train" for a training dataset, "test" for a test-only dataset.
+        split: How the hold-outs were chosen, None for merged datasets.
     """
 
     name: str
@@ -103,6 +155,8 @@ class DatasetSummary:
     sources: list[str] = field(default_factory=list)
     annotation_source: str = ""
     size_bytes: int = 0
+    kind: str = KIND_TRAIN
+    split: SplitInfo | None = None
 
     @property
     def images(self) -> int:
@@ -132,10 +186,12 @@ def write_dataset(  # noqa: PLR0913
     boxes: list[BoxRecord],
     class_names: list[str],
     val_fraction: float = 0.0,
+    test_fraction: float = 0.0,
     split_by: str = "tag",
     seed: int = 0,
     annotation_source: str = "",
     copy_files: bool = False,
+    split: Split | None = None,
 ) -> DatasetSummary:
     """Writes a new dataset folder from images and their boxes.
 
@@ -146,11 +202,13 @@ def write_dataset(  # noqa: PLR0913
         boxes: Boxes referring to the images by index.
         class_names: Category order. Classes used by boxes but missing here are appended.
         val_fraction: Share of images held out as validation, 0 for none.
+        test_fraction: Share of images held out as test, 0 for none.
         split_by: "tag" holds out whole tags (recordings) so frames of one video never
             straddle the split, "image" splits single images.
         seed: Random seed for the split.
         annotation_source: Recorded in the manifest.
         copy_files: Copy image files instead of hard-linking them.
+        split: A precomputed split over the image indices; None picks at random.
 
     Returns:
         The summary of the written dataset.
@@ -164,16 +222,23 @@ def write_dataset(  # noqa: PLR0913
         raise ValueError(f"Dataset '{name}' already exists.")
     if not images:
         raise ValueError("There are no images to export.")
-    if not 0.0 <= val_fraction < 1.0:
-        raise ValueError("val_fraction must be in [0, 1).")
+    if val_fraction < 0 or test_fraction < 0 or val_fraction + test_fraction >= 1.0:
+        raise ValueError("val_fraction and test_fraction must be >= 0 and sum to below 1.")
     names = [image.path.name for image in images]
     if len(set(names)) != len(names):
         raise ValueError("Image file names must be unique inside one dataset.")
 
     categories = _categories(class_names=class_names, boxes=boxes)
-    val_indices = _choose_val(
-        images=images, val_fraction=val_fraction, split_by=split_by, seed=seed
-    )
+    if split is None:
+        split = val_split.random_split(
+            units=val_split.build_units(
+                tags=[image.tag for image in images], split_by=split_by, vectors=None
+            ),
+            val_fraction=val_fraction,
+            test_fraction=test_fraction,
+            split_by=split_by,
+            seed=seed,
+        )
     boxes_by_image: dict[int, list[BoxRecord]] = defaultdict(list)
     for box in boxes:
         boxes_by_image[box.image_index].append(box)
@@ -185,14 +250,20 @@ def write_dataset(  # noqa: PLR0913
         created_at=_now(),
         classes=[category["name"] for category in categories],
         annotation_source=annotation_source,
+        split=split.info,
     )
-    for split in SPLITS:
-        indices = [i for i in range(len(images)) if (i in val_indices) == (split == VAL_SPLIT)]
-        if split == VAL_SPLIT and not indices:
+    holdout_of = {HOLDOUT_SPLIT[kind]: kind for kind in HOLDOUT_SPLIT}
+    for split_name in SPLITS:
+        indices = [
+            i
+            for i in range(len(images))
+            if split.assignment.get(i, TRAIN_SPLIT) == holdout_of.get(split_name, TRAIN_SPLIT)
+        ]
+        if split_name != TRAIN_SPLIT and not indices:
             continue
-        summary.splits[split] = _write_export_split(
+        summary.splits[split_name] = _write_export_split(
             out_dir=out_dir,
-            split=split,
+            split=split_name,
             name=name,
             images=[images[i] for i in indices],
             boxes_by_image=[boxes_by_image.get(i, []) for i in indices],
@@ -201,7 +272,7 @@ def write_dataset(  # noqa: PLR0913
         )
     summary.size_bytes = _size_bytes(out_dir)
     _write_manifest(out_dir=out_dir, summary=summary)
-    _write_readme(out_dir=out_dir, summary=summary, split_by=split_by, val_fraction=val_fraction)
+    _write_readme(out_dir=out_dir, summary=summary)
     return summary
 
 
@@ -252,9 +323,121 @@ def merge_datasets(
         except ValueError:
             shutil.rmtree(out_dir)
             raise
+    if set(summary.splits) == {TEST_SPLIT}:
+        summary.kind = KIND_TEST
     summary.size_bytes = _size_bytes(out_dir)
     _write_manifest(out_dir=out_dir, summary=summary)
-    _write_readme(out_dir=out_dir, summary=summary, split_by="source", val_fraction=0.0)
+    _write_readme(out_dir=out_dir, summary=summary)
+    return summary
+
+
+def load_pool(datasets_dir: Path, sources: list[str]) -> ImagePool:
+    """Reads every split of the given datasets into one pool of images.
+
+    Raises:
+        ValueError: If no source is given or one does not exist.
+    """
+    if not sources or len(set(sources)) != len(sources):
+        raise ValueError("Pick at least one dataset, each once.")
+    class_names, per_split = _load_sources(datasets_dir=datasets_dir, sources=sources)
+    pool = ImagePool(class_names=class_names, sources=list(sources))
+    seen: set[str] = set()
+    for split in SPLITS:
+        for source_dir, coco in per_split.get(split, []):
+            by_image: dict[int, list[dict[str, Any]]] = defaultdict(list)
+            for annotation in coco["annotations"]:
+                by_image[annotation["image_id"]].append(annotation)
+            category_names = {c["id"]: c["name"] for c in coco["categories"]}
+            for image in coco["images"]:
+                if image["file_name"] in seen:
+                    continue
+                seen.add(image["file_name"])
+                pool.images.append(
+                    PoolImage(
+                        source_dir=source_dir,
+                        split=split,
+                        image=image,
+                        annotations=tuple(by_image.get(image["id"], [])),
+                        category_names=category_names,
+                    )
+                )
+    return pool
+
+
+def write_test_dataset(  # noqa: PLR0913
+    datasets_dir: Path,
+    name: str,
+    pool: ImagePool,
+    test_indices: list[int],
+    split: SplitInfo | None = None,
+    copy_files: bool = False,
+) -> DatasetSummary:
+    """Writes a test-only dataset from chosen images of the pool.
+
+    Raises:
+        ValueError: On a bad name, an existing folder, or no chosen images.
+    """
+    validate_name(name=name)
+    out_dir = datasets_dir / name
+    if out_dir.exists():
+        raise ValueError(f"Dataset '{name}' already exists.")
+    if not test_indices:
+        raise ValueError("No images were chosen for the test dataset.")
+    categories = [
+        {"id": i, "name": class_name, "supercategory": "object"}
+        for i, class_name in enumerate(pool.class_names, start=1)
+    ]
+    category_id = {category["name"]: category["id"] for category in categories}
+    coco: dict[str, Any] = {
+        "info": _info(description=f"{name}: test dataset drawn from {', '.join(pool.sources)}"),
+        "licenses": _LICENSES,
+        "categories": categories,
+        "images": [],
+        "annotations": [],
+    }
+    out_dir.mkdir(parents=True)
+    (out_dir / TEST_SPLIT).mkdir()
+    annotation_id = 1
+    for image_id, index in enumerate(sorted(test_indices), start=1):
+        entry = pool.images[index]
+        _place(
+            src=entry.source_dir / entry.split / entry.file_name,
+            dst=out_dir / TEST_SPLIT / entry.file_name,
+            copy_files=copy_files,
+        )
+        coco["images"].append(
+            {
+                **entry.image,
+                "id": image_id,
+                "source_dataset": entry.image.get("source_dataset") or entry.source_dir.name,
+            }
+        )
+        for annotation in entry.annotations:
+            coco["annotations"].append(
+                {
+                    **annotation,
+                    "id": annotation_id,
+                    "image_id": image_id,
+                    "category_id": category_id[entry.category_names[annotation["category_id"]]],
+                }
+            )
+            annotation_id += 1
+    _write_json(out_dir / "annotations" / f"instances_{TEST_SPLIT}.json", coco)
+    summary = DatasetSummary(
+        name=name,
+        path=str(out_dir.resolve()),
+        created_at=_now(),
+        classes=list(pool.class_names),
+        splits={
+            TEST_SPLIT: SplitSummary(images=len(coco["images"]), boxes=len(coco["annotations"]))
+        },
+        sources=list(pool.sources),
+        kind=KIND_TEST,
+        split=split,
+    )
+    summary.size_bytes = _size_bytes(out_dir)
+    _write_manifest(out_dir=out_dir, summary=summary)
+    _write_readme(out_dir=out_dir, summary=summary)
     return summary
 
 
@@ -288,6 +471,8 @@ def read_summary(dataset_dir: Path) -> DatasetSummary | None:
         sources=list(data.get("sources", [])),
         annotation_source=data.get("annotation_source", ""),
         size_bytes=int(data.get("size_bytes", 0)),
+        kind=str(data.get("kind", KIND_TRAIN)),
+        split=_split_info(data.get("split")),
     )
 
 
@@ -361,6 +546,7 @@ def _write_export_split(  # noqa: PLR0913
                 "license": 1,
                 "recording": image.tag,
                 "source_dataset": name,
+                "sample_id": image.sample_id,
             }
         )
         for box in boxes:
@@ -455,37 +641,6 @@ def _categories(class_names: list[str], boxes: list[BoxRecord]) -> list[dict[str
     ]
 
 
-def _choose_val(
-    images: list[ImageRecord], val_fraction: float, split_by: str, seed: int
-) -> set[int]:
-    """Indices of the images held out as validation."""
-    if val_fraction <= 0 or len(images) < _MIN_IMAGES_FOR_SPLIT:
-        return set()
-    rng = random.Random(seed)
-    target = val_fraction * len(images)
-    if split_by == "image":
-        indices = list(range(len(images)))
-        rng.shuffle(indices)
-        return set(indices[: max(1, round(target))])
-    # Whole tags go to validation until the target is reached; untagged images count as
-    # their own group each, so they split like single images.
-    groups: dict[str, list[int]] = defaultdict(list)
-    for index, image in enumerate(images):
-        groups[image.tag or f"\0{index}"].append(index)
-    keys = list(groups)
-    rng.shuffle(keys)
-    chosen: set[int] = set()
-    for key in keys:
-        if len(chosen) >= target:
-            break
-        if len(chosen) + len(groups[key]) > target * 1.5 and chosen:
-            continue  # A huge group would overshoot; keep looking for a smaller one.
-        chosen.update(groups[key])
-    if len(chosen) == len(images):
-        chosen.discard(groups[keys[0]][0])
-    return chosen
-
-
 def _clip(box: BoxRecord, width: int, height: int) -> tuple[float, float, float, float] | None:
     x1 = min(max(box.x, 0.0), width)
     y1 = min(max(box.y, 0.0), height)
@@ -537,27 +692,68 @@ def _write_manifest(out_dir: Path, summary: DatasetSummary) -> None:
     _write_json(out_dir / MANIFEST_FILE, data)
 
 
-def _write_readme(
-    out_dir: Path, summary: DatasetSummary, split_by: str, val_fraction: float
-) -> None:
+def _write_readme(out_dir: Path, summary: DatasetSummary) -> None:
     rows = "\n".join(
         f"| {split} | {counts.images} | {counts.boxes} |"
         for split, counts in summary.splits.items()
     )
     classes = ", ".join(f"{i}={name}" for i, name in enumerate(summary.classes, start=1))
-    origin = (
-        f"Merged from: {', '.join(summary.sources)}. Each source keeps its own split."
-        if summary.sources
-        else f"Exported from LightlyStudio, annotation source '{summary.annotation_source}', "
-        f"split by {split_by} with validation fraction {val_fraction}."
-    )
+    if summary.sources and summary.kind == KIND_TEST:
+        origin = f"Test dataset drawn from: {', '.join(summary.sources)}."
+    elif summary.sources:
+        origin = f"Merged from: {', '.join(summary.sources)}. Each source keeps its own split."
+    else:
+        origin = f"Exported from CrossingVision, annotation source '{summary.annotation_source}'."
+    exp_lines = [
+        f"    self.num_classes = {len(summary.classes)}",
+        f'    self.data_dir = "{summary.path}"',
+        f'    self.train_ann = "instances_{TRAIN_SPLIT}.json"',
+        f'    self.val_ann = "instances_{VAL_SPLIT}.json"',
+    ]
+    if TEST_SPLIT in summary.splits:
+        exp_lines.append(f'    self.test_ann = "instances_{TEST_SPLIT}.json"')
     out_dir.joinpath("README.md").write_text(
         f"# {summary.name}\n\n{origin}\nCreated {summary.created_at}. Images are hard links "
         "where possible; the sources are unchanged.\n\n| split | images | boxes |\n|---|---|---|\n"
-        f"{rows}\n\nClasses: {classes}\n\n## YOLOX exp settings\n\n"
-        f"    self.num_classes = {len(summary.classes)}\n"
-        f'    self.data_dir = "{summary.path}"\n'
-        f'    self.train_ann = "instances_{TRAIN_SPLIT}.json"\n'
-        f'    self.val_ann = "instances_{VAL_SPLIT}.json"\n',
+        f"{rows}\n\nClasses: {classes}\n{_split_section(summary.split)}\n"
+        "## YOLOX exp settings\n\n" + "\n".join(exp_lines) + "\n",
         encoding="utf-8",
+    )
+
+
+def _split_section(info: SplitInfo | None) -> str:
+    if info is None:
+        return ""
+    lines = [
+        "\n## Hold-out split\n",
+        f"Strategy: {info.strategy}, split by {info.split_by}, validation fraction "
+        f"{info.val_fraction}, test fraction {info.test_fraction}.",
+    ]
+    if info.groups:
+        lines.append(
+            f"The hold-outs were taken from each of {info.groups} similarity groups"
+            + (f" (requested {info.groups_requested})" if info.groups_requested else "")
+            + ".\n\n| group | train | val | test |\n|---|---|---|---|"
+        )
+        lines.extend(
+            f"| {i} | {counts.train} | {counts.val} | {counts.test} |"
+            for i, counts in enumerate(info.group_counts, start=1)
+        )
+    if info.fallback_images:
+        lines.append(f"\n{info.fallback_images} images without an embedding were split at random.")
+    return "\n".join(lines) + "\n"
+
+
+def _split_info(data: dict[str, Any] | None) -> SplitInfo | None:
+    if not data:
+        return None
+    return SplitInfo(
+        strategy=str(data.get("strategy", "")),
+        split_by=str(data.get("split_by", "")),
+        val_fraction=float(data.get("val_fraction", 0.0)),
+        test_fraction=float(data.get("test_fraction", 0.0)),
+        groups=int(data.get("groups", 0)),
+        groups_requested=data.get("groups_requested"),
+        group_counts=[GroupCounts(**counts) for counts in data.get("group_counts", [])],
+        fallback_images=int(data.get("fallback_images", 0)),
     )

@@ -6,28 +6,35 @@ from collections import defaultdict
 from pathlib import Path
 from uuid import UUID
 
+import numpy as np
 from labelformat.formats import COCOObjectDetectionInput
+from numpy.typing import NDArray
 from sqlmodel import Session, col, select
 
 from lightly_studio.core.image import add_images
 from lightly_studio.dataset import env
+from lightly_studio.embed import embed_samples
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionCreate, SampleType
-from lightly_studio.models.sample import SampleTagLinkTable
+from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.tag import TagTable
-from lightly_studio.pipeline_datasets import coco_dataset
+from lightly_studio.pipeline_datasets import coco_dataset, val_split
 from lightly_studio.pipeline_datasets.coco_dataset import (
     SPLITS,
     BoxRecord,
     DatasetSummary,
+    ImagePool,
     ImageRecord,
 )
+from lightly_studio.pipeline_datasets.val_split import Split
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_embedding_model_resolver,
     collection_resolver,
     grid_filter_sample_ids,
     image_resolver,
+    sample_embedding_resolver,
     sample_resolver,
     tag_resolver,
 )
@@ -47,6 +54,9 @@ def export_dataset(  # noqa: PLR0913
     image_filter: ImageFilter | None,
     val_fraction: float,
     split_by: str,
+    test_fraction: float = 0.0,
+    split_strategy: str = val_split.STRATEGY_EMBEDDING,
+    groups: int | None = None,
 ) -> DatasetSummary:
     """Writes the images in the current view and their boxes as a new dataset folder.
 
@@ -58,6 +68,10 @@ def export_dataset(  # noqa: PLR0913
         image_filter: The grid filter; None means the whole collection.
         val_fraction: Share of images held out as validation.
         split_by: "tag" keeps whole tags together, "image" splits single images.
+        test_fraction: Share of images held out as test.
+        split_strategy: "embedding" spreads the hold-outs over similarity groups of the
+            image embeddings (computing missing ones first), "random" picks at random.
+        groups: Number of similarity groups, None for automatic.
 
     Returns:
         The summary of the written dataset.
@@ -74,6 +88,7 @@ def export_dataset(  # noqa: PLR0913
         session=session, collection_id=collection_id, image_filter=image_filter
     )
     images = image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
+    sample_ids = [image.sample_id for image in images]
     tag_by_sample = _first_tag_by_sample(session=session, sample_ids=sample_ids)
     records = [
         ImageRecord(
@@ -81,10 +96,22 @@ def export_dataset(  # noqa: PLR0913
             width=image.width,
             height=image.height,
             tag=tag_by_sample.get(image.sample_id, ""),
+            sample_id=str(image.sample_id),
         )
         for image in images
     ]
     index_by_sample = {image.sample_id: index for index, image in enumerate(images)}
+    split = choose_split(
+        session=session,
+        collection_id=collection_id,
+        sample_ids=sample_ids,
+        tags=[record.tag for record in records],
+        val_fraction=val_fraction,
+        test_fraction=test_fraction,
+        split_by=split_by,
+        split_strategy=split_strategy,
+        groups=groups,
+    )
 
     annotations = annotation_resolver.get_all_by_collection_id_and_parent_sample_ids(
         session=session,
@@ -116,9 +143,79 @@ def export_dataset(  # noqa: PLR0913
         boxes=boxes,
         class_names=sorted(label_name.values(), key=str.lower),
         val_fraction=val_fraction,
+        test_fraction=test_fraction,
         split_by=split_by,
         annotation_source=source.name,
+        split=split,
     )
+
+
+def choose_split(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    sample_ids: list[UUID],
+    tags: list[str],
+    val_fraction: float,
+    test_fraction: float,
+    split_by: str,
+    split_strategy: str,
+    groups: int | None,
+) -> Split:
+    """Picks the hold-outs for the given images, spread over embedding groups when asked.
+
+    Missing embeddings are computed first with the collection's default model. Images that
+    still have none are split at random and counted as fallback.
+    """
+    if split_strategy != val_split.STRATEGY_EMBEDDING or val_fraction + test_fraction <= 0:
+        units = val_split.build_units(tags=tags, split_by=split_by, vectors=None)
+        return val_split.random_split(
+            units=units, val_fraction=val_fraction, test_fraction=test_fraction, split_by=split_by
+        )
+    vectors = embedding_vectors(session=session, collection_id=collection_id, sample_ids=sample_ids)
+    units = val_split.build_units(tags=tags, split_by=split_by, vectors=vectors)
+    return val_split.holdout_split(
+        units=units,
+        val_fraction=val_fraction,
+        test_fraction=test_fraction,
+        split_by=split_by,
+        groups=groups,
+    )
+
+
+def embedding_vectors(
+    session: Session, collection_id: UUID, sample_ids: list[UUID]
+) -> list[NDArray[np.float32] | None]:
+    """One embedding per sample in the given order, None where none could be made.
+
+    Samples without an embedding are embedded with the collection's default model first;
+    when no embedder is available they stay None.
+    """
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=collection_id
+    )
+    if model_id is None:
+        missing = list(sample_ids)
+    else:
+        unembedded = set(
+            image_resolver.get_unembedded_sample_ids(
+                session=session, collection_id=collection_id, embedding_model_id=model_id
+            )
+        )
+        missing = [sample_id for sample_id in sample_ids if sample_id in unembedded]
+    if missing:
+        embed_samples.embed_image_samples(
+            session=session, collection_id=collection_id, sample_ids=missing
+        )
+        model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+            session=session, collection_id=collection_id
+        )
+    if model_id is None:
+        return [None] * len(sample_ids)
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=session, sample_ids=list(sample_ids), embedding_model_id=model_id
+    )
+    by_id = {row.sample_id: np.asarray(row.embedding, dtype=np.float32) for row in rows}
+    return [by_id.get(sample_id) for sample_id in sample_ids]
 
 
 def preview_dataset(session: Session, name: str) -> UUID:
@@ -168,6 +265,72 @@ def preview_dataset(session: Session, name: str) -> UUID:
     return collection_id
 
 
+def build_test_dataset(  # noqa: PLR0913
+    session: Session,
+    name: str,
+    sources: list[str],
+    fraction: float | None,
+    count: int | None,
+    split_strategy: str = val_split.STRATEGY_EMBEDDING,
+    groups: int | None = None,
+) -> DatasetSummary:
+    """Draws a test-only dataset from all images of the given datasets.
+
+    The images of every split of the sources are pooled (each file name once) and a share
+    of them, spread over similarity groups when embeddings are available, becomes the
+    test2017 split of a new dataset.
+
+    Args:
+        session: The database session, used to read or compute the embeddings.
+        name: Folder name of the new dataset.
+        sources: The datasets to draw from.
+        fraction: Share of the pooled images to take; or
+        count: Number of images to take, converted to a fraction of the pool.
+        split_strategy: "embedding" or "random".
+        groups: Number of similarity groups, None for automatic.
+
+    Raises:
+        ValueError: On a bad name, a missing source, neither or both of fraction and count,
+            or a share that leaves no image.
+    """
+    if (fraction is None) == (count is None):
+        raise ValueError("Give either a fraction or a count of test images.")
+    pool = coco_dataset.load_pool(datasets_dir=env.LIGHTLY_STUDIO_DATASETS_DIR, sources=sources)
+    if count is not None:
+        if count < 1 or count >= len(pool.images):
+            raise ValueError(
+                f"The count must be between 1 and {len(pool.images) - 1} for these datasets."
+            )
+        fraction = count / len(pool.images)
+    assert fraction is not None
+    if not 0 < fraction < 1:
+        raise ValueError("The fraction must be above 0 and below 1.")
+
+    tags = [str(entry.image.get("recording", "")) for entry in pool.images]
+    if split_strategy == val_split.STRATEGY_EMBEDDING:
+        vectors = _pool_vectors(session=session, pool=pool)
+        units = val_split.build_units(tags=tags, split_by=val_split.SPLIT_BY_IMAGE, vectors=vectors)
+        split = val_split.holdout_split(
+            units=units,
+            val_fraction=0.0,
+            test_fraction=fraction,
+            split_by=val_split.SPLIT_BY_IMAGE,
+            groups=groups,
+        )
+    else:
+        units = val_split.build_units(tags=tags, split_by=val_split.SPLIT_BY_IMAGE, vectors=None)
+        split = val_split.random_split(
+            units=units, val_fraction=0.0, test_fraction=fraction, split_by=val_split.SPLIT_BY_IMAGE
+        )
+    return coco_dataset.write_test_dataset(
+        datasets_dir=env.LIGHTLY_STUDIO_DATASETS_DIR,
+        name=name,
+        pool=pool,
+        test_indices=sorted(split.assignment),
+        split=split.info,
+    )
+
+
 def list_datasets() -> list[DatasetSummary]:
     """The datasets in the datasets folder, newest first."""
     return coco_dataset.list_datasets(datasets_dir=env.LIGHTLY_STUDIO_DATASETS_DIR)
@@ -183,6 +346,33 @@ def merge_datasets(name: str, sources: list[str]) -> DatasetSummary:
 def delete_dataset(name: str) -> None:
     """Removes a dataset folder. The Studio preview dataset, if any, stays."""
     coco_dataset.delete_dataset(datasets_dir=env.LIGHTLY_STUDIO_DATASETS_DIR, name=name)
+
+
+def _pool_vectors(session: Session, pool: ImagePool) -> list[NDArray[np.float32] | None]:
+    """Embeddings for the pool's images through their recorded sample ids, per collection."""
+    vectors: list[NDArray[np.float32] | None] = [None] * len(pool.images)
+    index_by_sample: dict[UUID, int] = {}
+    for index, entry in enumerate(pool.images):
+        try:
+            index_by_sample[UUID(entry.sample_id)] = index
+        except ValueError:
+            continue
+    if not index_by_sample:
+        return vectors
+    by_collection: dict[UUID, list[UUID]] = defaultdict(list)
+    for sample_id, collection_id in session.exec(
+        select(SampleTable.sample_id, SampleTable.collection_id).where(
+            col(SampleTable.sample_id).in_(list(index_by_sample))
+        )
+    ).all():
+        by_collection[collection_id].append(sample_id)
+    for collection_id, sample_ids in by_collection.items():
+        found = embedding_vectors(
+            session=session, collection_id=collection_id, sample_ids=sample_ids
+        )
+        for sample_id, vector in zip(sample_ids, found):
+            vectors[index_by_sample[sample_id]] = vector
+    return vectors
 
 
 def _sample_ids_in_view(

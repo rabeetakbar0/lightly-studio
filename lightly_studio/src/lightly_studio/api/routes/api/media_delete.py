@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.upload import media_delete
+from lightly_studio.upload import annotation_source_delete, media_delete
 
 media_delete_router = APIRouter(tags=["media_delete"])
 
@@ -32,6 +32,26 @@ class DeleteImagesView(BaseModel):
     deleted_files: int
     deleted_tag: bool
     deleted_tags: int
+    deleted_sources: int
+    deleted_classes: int
+
+
+class DeleteAnnotationSourceRequest(BaseModel):
+    """Which annotation source to delete."""
+
+    annotation_collection_id: UUID
+    delete_unused_classes: bool = Field(
+        True, description="Also delete annotation classes that no annotation uses any more."
+    )
+
+
+class DeleteAnnotationSourceView(BaseModel):
+    """Outcome of deleting an annotation source."""
+
+    deleted_sources: int
+    deleted_annotations: int
+    deleted_evaluations: int
+    deleted_classes: int
 
 
 @media_delete_router.post(
@@ -55,3 +75,26 @@ def delete_images(
         delete_all=body.delete_all,
     )
     return DeleteImagesView.model_validate(outcome, from_attributes=True)
+
+
+@media_delete_router.post(
+    "/collections/{collection_id}/annotation_sources/delete",
+    response_model=DeleteAnnotationSourceView,
+)
+def delete_annotation_source(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        FastAPIPath(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    body: DeleteAnnotationSourceRequest,
+) -> DeleteAnnotationSourceView:
+    """Deletes an annotation source with its annotations and the evaluations that used it."""
+    outcome = annotation_source_delete.delete_annotation_source(
+        session=session,
+        collection_id=collection.collection_id,
+        annotation_collection_id=body.annotation_collection_id,
+        delete_unused_classes=body.delete_unused_classes,
+    )
+    return DeleteAnnotationSourceView.model_validate(outcome, from_attributes=True)

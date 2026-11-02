@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
     remove: vi.fn(),
     merge: vi.fn(),
     start: vi.fn(),
+    buildTest: vi.fn(),
     data: [] as unknown[],
     runs: [] as unknown[]
 }));
@@ -16,12 +17,15 @@ vi.mock('$lib/hooks/usePipelineDatasets/usePipelineDatasets.svelte', () => ({
     usePipelineDatasets: () => ({ data: mocks.data, isLoading: false, error: null }),
     usePipelineDatasetActions: () => ({
         mergeMutation: { isPending: false, isSuccess: false },
+        buildTestMutation: { isPending: false, isSuccess: false },
+        buildTest: mocks.buildTest,
         deleteMutation: { isPending: false, isSuccess: false },
         preview: mocks.preview,
         merge: mocks.merge,
         remove: mocks.remove
     }),
-    formatBytes: (bytes: number) => `${bytes} B`
+    formatBytes: (bytes: number) => `${bytes} B`,
+    splitSummary: () => ''
 }));
 
 vi.mock('$lib/hooks/usePipelineTraining/usePipelineTraining.svelte', () => ({
@@ -35,15 +39,19 @@ vi.mock('$lib/hooks/usePipelineTraining/usePipelineTraining.svelte', () => ({
     }),
     useTrainingRuns: () => ({ data: mocks.runs, isLoading: false, error: null }),
     useTrainingLog: () => ({ data: { text: '' }, isLoading: false, error: null }),
+    useTestDatasets: () => ({ data: [], isLoading: false, isSuccess: true, error: null }),
     useTrainingActions: () => ({
         startMutation: { isPending: false, isSuccess: false },
+        testMutation: { isPending: false, isSuccess: false },
         stopMutation: { isPending: false, isSuccess: false },
         deleteMutation: { isPending: false, isSuccess: false },
         start: mocks.start,
+        startTest: vi.fn(),
         stop: vi.fn(),
         remove: vi.fn()
     }),
-    isActiveRun: (run: { status: string }) => run.status === 'running'
+    isActiveRun: (run: { status: string }) => run.status === 'running',
+    testResultLabel: () => 'AP 76.3'
 }));
 
 const dataset = (name: string) => ({
@@ -70,7 +78,33 @@ describe('TrainPanel', () => {
         expect(screen.getByText(/No datasets yet/)).toBeInTheDocument();
         expect(screen.getByTestId('merge-datasets')).toBeDisabled();
         expect(screen.getByTestId('train-model')).toBeDisabled();
+        expect(screen.getByTestId('build-test-dataset')).toBeDisabled();
         expect(screen.getByText(/No runs yet/)).toBeInTheDocument();
+    });
+
+    it('builds a test dataset from chosen datasets', async () => {
+        mocks.data = [dataset('data1'), dataset('data2')];
+        render(TrainPanel, { props: { onClose: vi.fn() } });
+        await fireEvent.click(screen.getByTestId('build-test-dataset'));
+        await waitFor(() => expect(screen.getByTestId('build-test-confirm')).toBeInTheDocument());
+        expect(screen.getByTestId('build-test-confirm')).toBeDisabled();
+        await fireEvent.click(screen.getByLabelText('Draw from data1'));
+        await fireEvent.click(screen.getByLabelText('Draw from data2'));
+        await fireEvent.input(screen.getByTestId('build-test-amount'), {
+            target: { value: '0.2' }
+        });
+        await fireEvent.input(screen.getByTestId('build-test-name'), {
+            target: { value: 'gate_test' }
+        });
+        await fireEvent.click(screen.getByTestId('build-test-confirm'));
+        expect(mocks.buildTest).toHaveBeenCalledWith({
+            name: 'gate_test',
+            sources: ['data1', 'data2'],
+            fraction: 0.2,
+            count: null,
+            split_strategy: 'embedding',
+            groups: null
+        });
     });
 
     it('opens the train dialog and lists runs', async () => {
@@ -87,6 +121,9 @@ describe('TrainPanel', () => {
                 exit_code: 0,
                 onnx_path: '/models/run1.onnx',
                 error: null,
+                kind: 'train',
+                model: null,
+                test_result: null,
                 progress: {
                     epoch: 2,
                     max_epoch: 2,

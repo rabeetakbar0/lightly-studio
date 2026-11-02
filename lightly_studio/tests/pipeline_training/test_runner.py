@@ -158,6 +158,94 @@ class TestTrainingRunner:
         runner.delete(name="run1")
         assert runner.list_runs() == []
 
+    def test_start_test(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        runner = helpers.setup_environment(tmp_path=tmp_path, mocker=mocker)
+        helpers.write_dataset(
+            tmp_path, "data1", ["GateArm", "LedLight"], splits={"train2017": ["s1", "s2", "s3"]}
+        )
+        helpers.write_dataset(
+            tmp_path,
+            "test1",
+            ["GateArm", "LedLight"],
+            splits={"test2017": ["s3", "s4", "s5", "s6"]},
+        )
+        helpers.write_model(tmp_path, "run1", ["GateArm", "LedLight"], checkpoint=True)
+        card = model_catalog.ModelCard(
+            run_name="run1",
+            dataset={"name": "data1", "classes": ["GateArm", "LedLight"]},
+            baseline=None,
+            config={"depth": 0.33, "width": 0.5},
+            best_ap50_95=0.5,
+        )
+        model_catalog.write_card(models_dir=tmp_path / "models", name="run1", card=card)
+
+        record = runner.start_test(model="run1", dataset="test1", batch_size=4, fp16=False)
+        assert record.kind == "test"
+        assert record.model == "run1"
+        assert record.name.startswith("run1__test__test1__")
+        assert record.command[2].endswith("tools/eval.py")
+        assert record.command[-4:] == ["-d", "1", "-b", "4"]
+        assert "-c" in record.command
+        assert record.command[record.command.index("-c") + 1] == str(
+            tmp_path / "models" / "run1.pth"
+        )
+        exp_source = (tmp_path / "runs" / record.name / "exp.py").read_text()
+        assert "name='test2017'" in exp_source
+        assert "json_file='instances_test2017.json'" in exp_source
+        assert "self.depth = 0.33" in exp_source
+
+        helpers.wait_until_done(runner, record.name)
+        record = runner.get_run(name=record.name)
+        assert record.status == runs.STATUS_FINISHED
+        assert record.test_result == {
+            "dataset": "test1",
+            "images": 4,
+            "ap50_95": 0.763,
+            "ap50": 0.98,
+            "per_class_ap": {"GateArm": 0.82505, "LedLight": 0.70168},
+            "overlap_images": 1,  # s3 is in data1's train split.
+            "run_name": record.name,
+            "created_at": record.created_at,
+        }
+        stored = model_catalog.read_card(models_dir=tmp_path / "models", name="run1")
+        assert stored is not None
+        assert stored.tests == [record.test_result]
+        assert stored.run_name == "run1"
+
+    def test_start_test__model_without_card(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        runner = helpers.setup_environment(tmp_path=tmp_path, mocker=mocker)
+        helpers.write_dataset(tmp_path, "test1", ["GateArm"], splits={"test2017": ["s1", "s2"]})
+        helpers.write_model(tmp_path, "yolox_m_slm_v4", ["GateArm"], checkpoint=True)
+        record = runner.start_test(model="yolox_m_slm_v4", dataset="test1", batch_size=8, fp16=True)
+        assert record.command[-1] == "--fp16"
+        assert "self.depth = 0.67" in (tmp_path / "runs" / record.name / "exp.py").read_text()
+        helpers.wait_until_done(runner, record.name)
+        record = runner.get_run(name=record.name)
+        assert record.status == runs.STATUS_FINISHED
+        assert record.test_result is not None
+        assert record.test_result["overlap_images"] is None
+        stored = model_catalog.read_card(models_dir=tmp_path / "models", name="yolox_m_slm_v4")
+        assert stored is not None
+        assert not stored.trained
+        assert len(stored.tests) == 1
+
+    def test_start_test__rejects_bad_input(self, tmp_path: Path, mocker: MockerFixture) -> None:
+        runner = helpers.setup_environment(tmp_path=tmp_path, mocker=mocker)
+        helpers.write_dataset(tmp_path, "train_only", ["GateArm"])
+        helpers.write_dataset(
+            tmp_path, "test1", ["GateArm", "LedLight"], splits={"test2017": ["s1", "s2"]}
+        )
+        helpers.write_model(tmp_path, "no_ckpt", ["GateArm", "LedLight"])
+        helpers.write_model(tmp_path, "one_class", ["GateArm"], checkpoint=True)
+        with pytest.raises(ValueError, match="has no checkpoint"):
+            runner.start_test(model="no_ckpt", dataset="test1", batch_size=8, fp16=True)
+        with pytest.raises(ValueError, match="has no test split"):
+            runner.start_test(model="one_class", dataset="train_only", batch_size=8, fp16=True)
+        with pytest.raises(ValueError, match="differ from the model's"):
+            runner.start_test(model="one_class", dataset="test1", batch_size=8, fp16=True)
+        with pytest.raises(ValueError, match="not in the models folder"):
+            runner.start_test(model="nope", dataset="test1", batch_size=8, fp16=True)
+
     def test_list_runs__reconciles_runs_of_an_earlier_process(
         self, tmp_path: Path, mocker: MockerFixture
     ) -> None:

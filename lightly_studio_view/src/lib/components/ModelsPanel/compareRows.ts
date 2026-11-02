@@ -87,6 +87,47 @@ export function compareRows(models: PipelineModelView[]): CompareRow[] {
             cards.map((c) => cell(c?.finished_at?.slice(0, 10)))
         )
     ];
+    const pct = (v: number | null | undefined) => (v == null ? '—' : (v * 100).toFixed(1));
+    const latestTests = cards.map((c) => {
+        const byDataset = new Map<string, NonNullable<typeof c>['tests'][number]>();
+        for (const t of c?.tests ?? []) byDataset.set(t.dataset, t);
+        return byDataset;
+    });
+    const testDatasets = [...new Set(latestTests.flatMap((m) => [...m.keys()]))].sort();
+    for (const dataset of testDatasets) {
+        const tests = latestTests.map((m) => m.get(dataset));
+        rows.push(
+            row(
+                'Test',
+                `${dataset} AP50:95`,
+                tests.map((t) => pct(t?.ap50_95))
+            )
+        );
+        rows.push(
+            row(
+                'Test',
+                `${dataset} AP50`,
+                tests.map((t) => pct(t?.ap50))
+            )
+        );
+        const classes = [...new Set(tests.flatMap((t) => Object.keys(t?.per_class_ap ?? {})))];
+        for (const cls of classes) {
+            rows.push(
+                row(
+                    'Test',
+                    `${dataset} AP ${cls}`,
+                    tests.map((t) => pct(t?.per_class_ap[cls]))
+                )
+            );
+        }
+        rows.push(
+            row(
+                'Test',
+                `${dataset} seen in training`,
+                tests.map((t) => (t ? cell(t.overlap_images) : '—'))
+            )
+        );
+    }
     for (const group of TRAIN_FIELD_GROUPS) {
         for (const field of group.fields) {
             rows.push(

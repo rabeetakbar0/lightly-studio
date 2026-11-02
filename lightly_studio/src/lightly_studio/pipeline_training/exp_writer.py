@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from lightly_studio.pipeline_datasets.coco_dataset import TEST_SPLIT, VAL_SPLIT
 from lightly_studio.pipeline_training.config import TrainConfig
 
 # The sub folder of the run folder where YOLOX writes checkpoints and its own log.
@@ -97,8 +98,8 @@ class Exp(MyExp):
 
         return COCODataset(
             data_dir=self.data_dir,
-            json_file=self.val_ann,
-            name="val2017",
+            json_file={eval_ann!r},
+            name={eval_split!r},
             img_size=self.test_size,
             preproc=ValTransform(legacy=kwargs.get("legacy", False)),
         )
@@ -106,7 +107,7 @@ class Exp(MyExp):
 
 
 def render_exp(config: TrainConfig, data_dir: Path, num_classes: int, output_dir: Path) -> str:
-    """Returns the exp file source for one run.
+    """Returns the exp file source for one training run.
 
     Args:
         config: The user's settings.
@@ -114,6 +115,40 @@ def render_exp(config: TrainConfig, data_dir: Path, num_classes: int, output_dir
         num_classes: Number of classes in the dataset.
         output_dir: Where YOLOX writes checkpoints; the run folder.
     """
+    return _render(
+        config=config,
+        data_dir=data_dir,
+        num_classes=num_classes,
+        output_dir=output_dir,
+        eval_split=VAL_SPLIT,
+        eval_ann=f"instances_{VAL_SPLIT}.json",
+    )
+
+
+def render_eval_exp(config: TrainConfig, data_dir: Path, num_classes: int, output_dir: Path) -> str:
+    """Returns an exp file whose evaluation set is the dataset's test2017 split.
+
+    Used with tools/eval.py to test a checkpoint; the training settings are carried over so
+    the architecture, test size, confidence and NMS thresholds match the model.
+    """
+    return _render(
+        config=config,
+        data_dir=data_dir,
+        num_classes=num_classes,
+        output_dir=output_dir,
+        eval_split=TEST_SPLIT,
+        eval_ann=f"instances_{TEST_SPLIT}.json",
+    )
+
+
+def _render(  # noqa: PLR0913
+    config: TrainConfig,
+    data_dir: Path,
+    num_classes: int,
+    output_dir: Path,
+    eval_split: str,
+    eval_ann: str,
+) -> str:
     return _TEMPLATE.format(
         c=config,
         gpu_cap=config.gpu_memory_cap_gb,
@@ -121,4 +156,6 @@ def render_exp(config: TrainConfig, data_dir: Path, num_classes: int, output_dir
         output_dir=str(output_dir),
         num_classes=num_classes,
         data_dir=str(data_dir),
+        eval_split=eval_split,
+        eval_ann=eval_ann,
     )

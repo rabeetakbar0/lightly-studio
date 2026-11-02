@@ -24,8 +24,15 @@ backend and frontend modules.
 - `projects/uploads/` and `projects/lightly_studio_pipeline.db`: data added through the GUI.
   Both gitignored. `LIGHTLY_STUDIO_UPLOAD_DIR` is set by the launcher before the import.
 - `projects/datasets/`: COCO datasets prepared from the GUI (Export → "Prepare COCO dataset"),
-  one folder each: `train2017/`, `val2017/`, `annotations/instances_*.json`, `dataset.json`
-  manifest, `README.md`. Images are hard links with bare file names; categories are 1-based.
+  one folder each: `train2017/`, `val2017/`, `test2017/`, `annotations/instances_*.json`,
+  `dataset.json` manifest (`kind` train|test, `split` info: strategy, fractions, groups, per
+  group counts, fallback count), `README.md`. Images are hard links with bare file names;
+  categories are 1-based; each COCO image entry carries the Studio `sample_id`. Hold-outs are
+  spread over k-means groups of the image embeddings (`pipeline_datasets/val_split.py`:
+  `build_units`, `holdout_split`, `choose_groups` = sqrt(n/2) bounded by hold-out count and
+  512, `allocate` largest-remainder); `service.embedding_vectors` computes missing embeddings
+  first. "Build test dataset" (`load_pool` + `write_test_dataset`) draws a test-only dataset
+  from existing ones.
   `LIGHTLY_STUDIO_DATASETS_DIR` points here (set by the launcher). Gitignored.
 - `projects/runs/<name>/`: one folder per training run started from the GUI: `run.json`
   (config, status, classes, command), `exp.py` (the generated YOLOX exp file), `log.txt`
@@ -52,10 +59,17 @@ backend and frontend modules.
   extraction, upload and delete services) and routes `api/routes/api/media_upload.py`,
   `media_delete.py`. `resolvers/image_resolver/delete_many_with_dependents.py` is the ordered
   DuckDB cascade for image samples.
+  `upload/annotation_source_delete.py` removes an annotation source (annotations via
+  `annotation_resolver.delete_annotations_by_ids`, evaluation runs incl. class metrics, its tags,
+  coverage, embedding-model and export-job rows, then the collection) and unused annotation
+  classes; route `POST /collections/{id}/annotation_sources/delete`; `delete_all` calls it for
+  every source. An annotation's source is its sample's `collection_id`, not a column on
+  `annotation_base`.
 - Frontend fork modules: `lib/components/MediaDropZone`, `ConfirmDeleteDialog`,
   `DeleteAllImagesDialog`, `TrainPanel` (right side panel tab "Train": datasets list, preview, merge,
   delete; `TrainModelDialog` with one tab per parameter group driven by `trainFields.ts`;
-  `RunsSection`, `RunRow`, `RunLogDialog` polling active runs), `ModelsPanel` (side panel tab
+  `RunsSection`, `RunRow`, `RunLogDialog` polling active runs; `RunsSection` offers
+  `TestModelDialog` when a training finishes; `BuildTestDatasetDialog`), `ModelsPanel` (side panel tab
   "Models": `ModelRow`, `CompareModelsDialog` over `compareRows.ts`, "Train from" opens
   `TrainModelDialog` with `initialConfig`), `ExportSamples/PrepareDatasetTab`; hooks
   `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`, `usePipelineDatasets`,

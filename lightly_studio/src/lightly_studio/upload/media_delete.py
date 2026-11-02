@@ -12,6 +12,7 @@ from sqlmodel import Session, select
 from lightly_studio.dataset import env
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import evaluation_run_resolver, image_resolver, tag_resolver
+from lightly_studio.upload import annotation_source_delete
 
 # Delete the uploaded files in chunks, so the database stays ahead of the file system.
 _FILE_BATCH_SIZE = 1000
@@ -26,12 +27,17 @@ class DeleteOutcome:
         deleted_files: Number of uploaded files removed from disk.
         deleted_tag: Whether the tag itself was removed.
         deleted_tags: Number of tags removed. With delete_all every tag of the collection goes.
+        deleted_sources: Annotation sources removed; only with delete_all.
+        deleted_classes: Annotation classes removed because nothing uses them; only with
+            delete_all.
     """
 
     deleted_samples: int = 0
     deleted_files: int = 0
     deleted_tag: bool = False
     deleted_tags: int = 0
+    deleted_sources: int = 0
+    deleted_classes: int = 0
 
 
 def delete_images(
@@ -52,8 +58,9 @@ def delete_images(
         collection_id: The image collection.
         sample_ids: Explicit image sample ids to delete.
         tag_id: Delete every image carrying this tag, then the tag itself.
-        delete_all: Delete every image of the collection, all of its tags, and its whole
-            upload folder, so the collection is a clean slate.
+        delete_all: Delete every image of the collection, all of its tags, its annotation
+            sources with their evaluations, the annotation classes nothing uses any more, and
+            its whole upload folder, so the collection is a clean slate.
 
     Returns:
         The outcome.
@@ -88,6 +95,11 @@ def delete_images(
         outcome.deleted_tag = tag_resolver.delete(session=session, tag_id=tag_id)
         outcome.deleted_tags = int(outcome.deleted_tag)
     if delete_all:
+        sources = annotation_source_delete.delete_all_annotation_sources(
+            session=session, collection_id=collection_id
+        )
+        outcome.deleted_sources = sources.deleted_sources
+        outcome.deleted_classes = sources.deleted_classes
         for tag in tag_resolver.get_all_by_collection_id(
             session=session, collection_id=collection_id
         ):

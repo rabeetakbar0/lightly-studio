@@ -139,7 +139,7 @@ strict = true
 disallow_untyped_defs = true
 ignore_missing_imports = false
 exclude = [
-    "datasets/",
+    "^datasets/",
     "vendor/",
     "scripts/download_coco_subset.py",
     # Runs under the training interpreter, which has torch and YOLOX; the backend does not.

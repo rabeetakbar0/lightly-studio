@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from lightly_studio.api.routes.api.pipeline_training import EpochEvaluationView
+from lightly_studio.api.routes.api.pipeline_training import EpochEvaluationView, TestResultView
 from lightly_studio.dataset import env
 from lightly_studio.pipeline_training import model_catalog
 from lightly_studio.pipeline_training.config import TrainConfig
@@ -53,11 +53,15 @@ class ModelCardView(BaseModel):
     trained_epochs: int
     created_at: str
     finished_at: str
+    trained: bool = Field(description="False when the card only holds test results.")
+    tests: list[TestResultView]
 
     @classmethod
     def from_card(cls, card: ModelCard) -> ModelCardView:
         """Builds the view from the stored card."""
         return cls(
+            trained=card.trained,
+            tests=[TestResultView.model_validate(t) for t in card.tests],
             run_name=card.run_name,
             dataset=ModelDatasetView.from_dict(card.dataset),
             baseline=card.baseline,

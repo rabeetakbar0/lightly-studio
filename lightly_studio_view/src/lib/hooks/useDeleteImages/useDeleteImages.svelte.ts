@@ -36,7 +36,10 @@ export const useDeleteImages = (getParams: () => UseDeleteImagesParams) => {
         onSuccess: async (result: DeleteImagesView, variables) => {
             await refresh(variables.body?.tag_id ?? undefined);
             const noun = result.deleted_samples === 1 ? 'image' : 'images';
-            toast.success(`Deleted ${result.deleted_samples} ${noun}`);
+            const sources = result.deleted_sources
+                ? ` and ${result.deleted_sources} annotation source${result.deleted_sources === 1 ? '' : 's'}`
+                : '';
+            toast.success(`Deleted ${result.deleted_samples} ${noun}${sources}`);
             getParams().onDeleted?.(result);
         },
         onError: (error) => {

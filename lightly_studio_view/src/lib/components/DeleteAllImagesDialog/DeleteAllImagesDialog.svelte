@@ -20,7 +20,7 @@
 
 <ConfirmDeleteDialog
     title="Delete all images?"
-    description={`All ${count} images in "${collection.name}" are removed with their annotations, tags and uploaded files. You get an empty collection to drop new data into.`}
+    description={`All ${count} images in "${collection.name}" are removed with their annotations, tags and uploaded files, together with every annotation source, evaluation and unused annotation class. You get an empty collection to drop new data into.`}
     confirmLabel="Delete everything"
     isPending={mutation.isPending}
     onConfirm={deleteAll}

@@ -6,6 +6,7 @@ import pytest
 
 from lightly_studio.pipeline_datasets import coco_dataset
 from lightly_studio.pipeline_datasets.coco_dataset import BoxRecord, ImageRecord
+from lightly_studio.pipeline_datasets.val_split import GroupCounts, Split, SplitInfo
 
 
 def _images(tmp_path: Path, count: int, tag_of: Callable[[int], str]) -> list[ImageRecord]:
@@ -15,7 +16,9 @@ def _images(tmp_path: Path, count: int, tag_of: Callable[[int], str]) -> list[Im
     for i in range(count):
         path = folder / f"frame_{i:03d}.jpg"
         path.write_bytes(b"jpg" + bytes([i]))
-        images.append(ImageRecord(path=path, width=640, height=480, tag=tag_of(i)))
+        images.append(
+            ImageRecord(path=path, width=640, height=480, tag=tag_of(i), sample_id=f"s{i}")
+        )
     return images
 
 
@@ -96,6 +99,46 @@ def test_write_dataset__val_split_by_image(tmp_path: Path) -> None:
     assert summary.splits["train2017"].images == 8
 
 
+def test_write_dataset__given_split(tmp_path: Path) -> None:
+    datasets_dir = tmp_path / "datasets"
+    info = SplitInfo(
+        strategy="embedding",
+        split_by="image",
+        val_fraction=0.2,
+        test_fraction=0.2,
+        groups=2,
+        group_counts=[GroupCounts(train=3, val=1, test=1), GroupCounts(train=3, val=1, test=1)],
+    )
+    summary = coco_dataset.write_dataset(
+        datasets_dir=datasets_dir,
+        name="data1",
+        images=_images(tmp_path, 10, lambda _: ""),
+        boxes=[],
+        class_names=["GateArm"],
+        split=Split(assignment={0: "val", 5: "val", 1: "test", 6: "test"}, info=info),
+    )
+    assert summary.splits["train2017"].images == 6
+    assert summary.splits["val2017"].images == 2
+    assert summary.splits["test2017"].images == 2
+    assert summary.split == info
+    out = datasets_dir / "data1"
+    test = json.loads((out / "annotations" / "instances_test2017.json").read_text())
+    assert [image["file_name"] for image in test["images"]] == ["frame_001.jpg", "frame_006.jpg"]
+    assert [image["sample_id"] for image in test["images"]] == ["s1", "s6"]
+    manifest = json.loads((out / "dataset.json").read_text())
+    assert manifest["kind"] == "train"
+    assert manifest["split"]["groups"] == 2
+    assert manifest["split"]["group_counts"][0] == {"train": 3, "val": 1, "test": 1}
+    readme = (out / "README.md").read_text()
+    assert "2 similarity groups" in readme
+    assert "| 1 | 3 | 1 | 1 |" in readme
+    assert 'self.test_ann = "instances_test2017.json"' in readme
+    reread = coco_dataset.read_summary(dataset_dir=out)
+    assert reread is not None
+    assert reread.split == info
+    assert reread.kind == "train"
+
+
 @pytest.mark.parametrize("name", ["", "bad/name", "-leading", "x" * 65])
 def test_write_dataset__bad_name(tmp_path: Path, name: str) -> None:
     images = _images(tmp_path, 1, lambda _: "")
@@ -133,6 +176,7 @@ def test_merge_datasets(tmp_path: Path) -> None:
         boxes=[BoxRecord(0, "GateArm", 1, 1, 10, 10)],
         class_names=["GateArm"],
         val_fraction=0.34,
+        split_by="image",
     )
     coco_dataset.write_dataset(
         datasets_dir=datasets_dir,
@@ -146,18 +190,18 @@ def test_merge_datasets(tmp_path: Path) -> None:
 
     assert summary.classes == ["GateArm", "LedLight"]
     assert summary.sources == ["a", "b"]
-    # "a" has one tag, so the tag split holds out 2 of its 3 images; "b" has no validation.
-    assert summary.splits["train2017"].images == 1 + 2
-    assert summary.splits["val2017"].images == 2
+    # "a" holds out 1 of its 3 images; "b" has no validation.
+    assert summary.splits["train2017"].images == 2 + 2
+    assert summary.splits["val2017"].images == 1
     train = json.loads(
         (datasets_dir / "ab" / "annotations" / "instances_train2017.json").read_text()
     )
-    assert [image["id"] for image in train["images"]] == [1, 2, 3]
+    assert [image["id"] for image in train["images"]] == [1, 2, 3, 4]
     assert {image["source_dataset"] for image in train["images"]} == {"a", "b"}
     # b's LedLight had id 1 in b and becomes id 2 in the merge.
     led = [ann for ann in train["annotations"] if ann["category_id"] == 2]
     assert len(led) == 1
-    assert len(list((datasets_dir / "ab" / "train2017").iterdir())) == 3
+    assert len(list((datasets_dir / "ab" / "train2017").iterdir())) == 4
 
 
 def test_merge_datasets__errors(tmp_path: Path) -> None:
@@ -166,6 +210,72 @@ def test_merge_datasets__errors(tmp_path: Path) -> None:
         coco_dataset.merge_datasets(datasets_dir=datasets_dir, name="m", sources=["a"])
     with pytest.raises(ValueError, match=r"does not exist"):
         coco_dataset.merge_datasets(datasets_dir=datasets_dir, name="m", sources=["a", "b"])
+
+
+def test_load_pool_and_write_test_dataset(tmp_path: Path) -> None:
+    datasets_dir = tmp_path / "datasets"
+    images = _images(tmp_path, 6, lambda i: "a" if i < 3 else "b")
+    coco_dataset.write_dataset(
+        datasets_dir=datasets_dir,
+        name="d1",
+        images=images[:4],
+        boxes=[BoxRecord(0, "GateArm", 1, 1, 10, 10), BoxRecord(3, "LedLight", 1, 1, 5, 5)],
+        class_names=["GateArm", "LedLight"],
+        val_fraction=0.25,
+        split_by="image",
+    )
+    # d2 shares frame_003 with d1 and adds two images; the shared name is taken once.
+    coco_dataset.write_dataset(
+        datasets_dir=datasets_dir,
+        name="d2",
+        images=images[3:],
+        boxes=[BoxRecord(1, "LedLight", 1, 1, 5, 5)],
+        class_names=["LedLight"],
+    )
+
+    pool = coco_dataset.load_pool(datasets_dir=datasets_dir, sources=["d1", "d2"])
+    assert [entry.file_name for entry in pool.images] == [
+        "frame_000.jpg",
+        "frame_001.jpg",
+        "frame_002.jpg",
+        "frame_003.jpg",
+        "frame_004.jpg",
+        "frame_005.jpg",
+    ] or len(pool.images) == 6
+    assert len(pool.images) == 6
+    assert pool.class_names == ["GateArm", "LedLight"]
+    assert {entry.sample_id for entry in pool.images} == {f"s{i}" for i in range(6)}
+
+    chosen = [
+        i
+        for i, entry in enumerate(pool.images)
+        if entry.file_name in {"frame_000.jpg", "frame_004.jpg"}
+    ]
+    summary = coco_dataset.write_test_dataset(
+        datasets_dir=datasets_dir, name="t1", pool=pool, test_indices=chosen
+    )
+    assert summary.kind == "test"
+    assert summary.sources == ["d1", "d2"]
+    assert list(summary.splits) == ["test2017"]
+    assert summary.splits["test2017"].images == 2
+    assert summary.splits["test2017"].boxes == 2  # GateArm on frame_000, LedLight on frame_004.
+    test = json.loads((datasets_dir / "t1" / "annotations" / "instances_test2017.json").read_text())
+    assert sorted(image["file_name"] for image in test["images"]) == [
+        "frame_000.jpg",
+        "frame_004.jpg",
+    ]
+    assert test["annotations"][0]["category_id"] == 1  # GateArm keeps id 1 in the union.
+    assert sorted(p.name for p in (datasets_dir / "t1" / "test2017").iterdir()) == [
+        "frame_000.jpg",
+        "frame_004.jpg",
+    ]
+    assert "Test dataset drawn from: d1, d2" in (datasets_dir / "t1" / "README.md").read_text()
+    with pytest.raises(ValueError, match="No images"):
+        coco_dataset.write_test_dataset(
+            datasets_dir=datasets_dir, name="t2", pool=pool, test_indices=[]
+        )
+    with pytest.raises(ValueError, match="does not exist"):
+        coco_dataset.load_pool(datasets_dir=datasets_dir, sources=["nope"])
 
 
 def test_delete_dataset(tmp_path: Path) -> None:

@@ -61,20 +61,38 @@ def test_pipeline_datasets_flow(
 
     response = test_client.post(
         f"/api/collections/{collection_id}/pipeline_datasets/export",
-        json={"name": "data1", "annotation_collection_id": source_id, "val_fraction": 0.0},
+        json={
+            "name": "data1",
+            "annotation_collection_id": source_id,
+            "val_fraction": 0.0,
+            "split_strategy": "random",
+        },
     )
     assert response.status_code == HTTP_STATUS_CREATED, response.text
     body = response.json()
     assert body["name"] == "data1"
+    assert body["kind"] == "train"
+    assert body["split"]["strategy"] == "random"
     assert body["images"] == 1
     assert body["boxes"] == 1
     assert body["splits"] == {"train2017": {"images": 1, "boxes": 1}}
 
     response = test_client.post(
         f"/api/collections/{collection_2}/pipeline_datasets/export",
-        json={"name": "data2", "annotation_collection_id": source_2},
+        json={"name": "data2", "annotation_collection_id": source_2, "split_strategy": "random"},
     )
     assert response.status_code == HTTP_STATUS_CREATED, response.text
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/pipeline_datasets/export",
+        json={
+            "name": "bad",
+            "annotation_collection_id": source_id,
+            "val_fraction": 0.5,
+            "test_fraction": 0.5,
+        },
+    )
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST, response.text
 
     response = test_client.post(
         "/api/pipeline_datasets/merge", json={"name": "both", "sources": ["data1", "data2"]}
@@ -83,8 +101,16 @@ def test_pipeline_datasets_flow(
     assert response.json()["images"] == 2
     assert response.json()["sources"] == ["data1", "data2"]
 
+    response = test_client.post(
+        "/api/pipeline_datasets/build_test",
+        json={"name": "t1", "sources": ["data1", "data2"], "count": 1, "split_strategy": "random"},
+    )
+    assert response.status_code == HTTP_STATUS_CREATED, response.text
+    assert response.json()["kind"] == "test"
+    assert response.json()["splits"] == {"test2017": {"images": 1, "boxes": 1}}
+
     names = [d["name"] for d in test_client.get("/api/pipeline_datasets").json()]
-    assert set(names) == {"data1", "data2", "both"}
+    assert set(names) == {"data1", "data2", "both", "t1"}
 
     response = test_client.post("/api/pipeline_datasets/both/preview")
     assert response.status_code == HTTP_STATUS_OK, response.text

@@ -7,6 +7,8 @@ from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.status import HTTP_STATUS_CREATED
 from lightly_studio.dataset import env
+from lightly_studio.pipeline_datasets import coco_dataset
+from lightly_studio.pipeline_datasets.coco_dataset import TEST_SPLIT
 from lightly_studio.pipeline_training import model_catalog, runner, runs
 from lightly_studio.pipeline_training.config import BASELINE_MODEL, BASELINE_WEIGHTS, TrainConfig
 from lightly_studio.pipeline_training.log_metrics import TrainingProgress
@@ -122,11 +124,19 @@ class TrainingRunView(BaseModel):
     onnx_path: str | None
     error: str | None
     progress: TrainingProgressView
+    kind: str = Field(description="'train' or 'test'.")
+    model: str | None = Field(description="The tested model, for test runs.")
+    test_result: TestResultView | None
 
     @classmethod
     def from_record(cls, record: RunRecord, progress: TrainingProgress) -> TrainingRunView:
         """Builds the view from the manifest and the parsed log."""
         return cls(
+            kind=record.kind,
+            model=record.model,
+            test_result=TestResultView.model_validate(record.test_result)
+            if record.test_result
+            else None,
             name=record.name,
             dataset=record.dataset,
             classes=record.classes,
@@ -139,6 +149,39 @@ class TrainingRunView(BaseModel):
             error=record.error,
             progress=TrainingProgressView.from_progress(progress),
         )
+
+
+class TestResultView(BaseModel):
+    """Scores of a model on the test split of a dataset."""
+
+    dataset: str
+    images: int
+    ap50_95: float | None
+    ap50: float | None
+    per_class_ap: dict[str, float]
+    overlap_images: int | None = Field(
+        description="Test images that were in the model's training data; null when unknown."
+    )
+    run_name: str = ""
+    created_at: str = ""
+
+
+class StartTestRequest(BaseModel):
+    """Which model to test on which dataset."""
+
+    model: str
+    dataset: str = Field(description="A dataset with a test split and the model's classes.")
+    batch_size: int = Field(16, ge=1)
+    fp16: bool = True
+
+
+class TestDatasetView(BaseModel):
+    """A dataset that can be used for testing."""
+
+    name: str
+    classes: list[str]
+    images: int
+    kind: str
 
 
 class TrainingLogView(BaseModel):
@@ -174,6 +217,34 @@ def start_training_run(body: StartTrainingRequest) -> TrainingRunView:
         name=body.name.strip(), dataset=body.dataset, config=body.config
     )
     return _view(record)
+
+
+@pipeline_training_router.post(
+    "/pipeline_training/tests", response_model=TrainingRunView, status_code=HTTP_STATUS_CREATED
+)
+def start_test_run(body: StartTestRequest) -> TrainingRunView:
+    """Evaluates a model's checkpoint on a dataset's test split with YOLOX's evaluator."""
+    record = runner.training_runner.start_test(
+        model=body.model, dataset=body.dataset, batch_size=body.batch_size, fp16=body.fp16
+    )
+    return _view(record)
+
+
+@pipeline_training_router.get(
+    "/pipeline_training/test_datasets", response_model=list[TestDatasetView]
+)
+def list_test_datasets() -> list[TestDatasetView]:
+    """The datasets that have a test split, newest first."""
+    return [
+        TestDatasetView(
+            name=summary.name,
+            classes=summary.classes,
+            images=summary.splits[TEST_SPLIT].images,
+            kind=summary.kind,
+        )
+        for summary in coco_dataset.list_datasets(datasets_dir=env.LIGHTLY_STUDIO_DATASETS_DIR)
+        if TEST_SPLIT in summary.splits
+    ]
 
 
 @pipeline_training_router.get("/pipeline_training/runs/{name}", response_model=TrainingRunView)

@@ -32,3 +32,32 @@ def test_parse_log__empty() -> None:
     assert progress.epoch == 0
     assert progress.evaluations == []
     assert progress.best_ap50_95 is None
+
+
+EVAL_LOG = """
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.100
+ Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.763
+ Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.980
+ Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.900
+per class AP:
+| class   | AP     | class    | AP     |
+|:--------|:-------|:---------|:-------|
+| GateArm | 82.505 | LedLight | 70.168 |
+per class AR:
+| class   | AR     | class    | AR     |
+|:--------|:-------|:---------|:-------|
+| GateArm | 85.909 | LedLight | 73.902 |
+"""
+
+
+def test_parse_eval() -> None:
+    result = log_metrics.parse_eval(text=EVAL_LOG)
+    assert result.ap50_95 == 0.763  # The last summary wins.
+    assert result.ap50 == 0.98
+    assert result.per_class_ap == {"GateArm": 0.82505, "LedLight": 0.70168}
+
+
+def test_parse_eval__empty() -> None:
+    result = log_metrics.parse_eval(text="nothing here")
+    assert result.ap50_95 is None
+    assert result.per_class_ap == {}

@@ -16,6 +16,9 @@ const run = (overrides: Partial<TrainingRunView>): TrainingRunView =>
         exit_code: null,
         onnx_path: null,
         error: null,
+        kind: 'train',
+        model: null,
+        test_result: null,
         progress: {
             epoch: 12,
             max_epoch: 150,
@@ -40,6 +43,51 @@ describe('RunRow', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Stop run1' }));
         expect(onStop).toHaveBeenCalled();
         expect(screen.queryByRole('button', { name: 'Delete run1' })).not.toBeInTheDocument();
+    });
+
+    it('offers to test a finished training and shows a test run result', async () => {
+        const onTest = vi.fn();
+        render(RunRow, {
+            props: {
+                run: run({ status: 'finished', onnx_path: '/m/run1.onnx' }),
+                onLog: vi.fn(),
+                onStop: vi.fn(),
+                onDelete: vi.fn(),
+                onTest
+            }
+        });
+        await fireEvent.click(screen.getByRole('button', { name: 'Test run1' }));
+        expect(onTest).toHaveBeenCalled();
+
+        render(RunRow, {
+            props: {
+                run: run({
+                    name: 'run1__test__t1__x',
+                    kind: 'test',
+                    model: 'run1',
+                    dataset: 't1',
+                    status: 'finished',
+                    test_result: {
+                        dataset: 't1',
+                        images: 120,
+                        ap50_95: 0.763,
+                        ap50: 0.98,
+                        per_class_ap: { GateArm: 0.8 },
+                        overlap_images: 3,
+                        run_name: 'run1__test__t1__x',
+                        created_at: ''
+                    }
+                }),
+                onLog: vi.fn(),
+                onStop: vi.fn(),
+                onDelete: vi.fn()
+            }
+        });
+        expect(screen.getByText('run1 on t1')).toBeInTheDocument();
+        expect(screen.getByText('test')).toBeInTheDocument();
+        expect(
+            screen.getByText('AP 76.3 · AP50 98.0 · 120 images · 3 seen in training')
+        ).toBeInTheDocument();
     });
 
     it('shows the error and offers delete for a finished run', async () => {

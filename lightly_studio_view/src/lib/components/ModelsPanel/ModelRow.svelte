@@ -3,7 +3,7 @@
     import { Button, Typography } from '$lib/components';
     import { Badge } from '$lib/components/ui/badge';
     import { Checkbox } from '$lib/components/ui/checkbox';
-    import { Rocket } from '@lucide/svelte';
+    import { FlaskConical, Rocket } from '@lucide/svelte';
     import { formatDate } from '$lib/utils';
     import { formatBytes } from '$lib/hooks/usePipelineDatasets/usePipelineDatasets.svelte';
     import {
@@ -18,10 +18,13 @@
         canTrain: boolean;
         onSelect: (selected: boolean) => void;
         onTrainFrom: () => void;
+        onTest: () => void;
     }
-    let { model, presets, selected, canTrain, onSelect, onTrainFrom }: Props = $props();
+    let { model, presets, selected, canTrain, onSelect, onTrainFrom, onTest }: Props = $props();
 
     const card = $derived(model.card);
+    const lastTest = $derived(card?.tests.at(-1) ?? null);
+    const pct = (v: number | null) => (v === null ? '–' : (v * 100).toFixed(1));
 </script>
 
 <li class="rounded-md border border-border bg-background p-3" data-testid="model-row">
@@ -50,7 +53,7 @@
                     new Date(model.modified_at)
                 )}
             </Typography>
-            {#if card}
+            {#if card?.trained}
                 <Typography variant="caption" className="block text-muted-foreground">
                     Trained on {card.dataset.name} ({card.dataset.images} images, {card.dataset
                         .boxes} boxes{card.dataset.annotation_source
@@ -65,7 +68,29 @@
                     No training history: trained outside the pipeline.
                 </Typography>
             {/if}
+            {#if lastTest}
+                <Typography variant="caption" className="block text-muted-foreground">
+                    Tested on {lastTest.dataset}: AP {pct(lastTest.ap50_95)} · AP50 {pct(
+                        lastTest.ap50
+                    )}{lastTest.overlap_images
+                        ? ` · ${lastTest.overlap_images} of ${lastTest.images} seen in training`
+                        : ''}
+                </Typography>
+            {/if}
         </div>
+        <Button
+            icon={FlaskConical}
+            ariaLabel={`Test ${model.name}`}
+            disabledReason={!model.has_checkpoint
+                ? 'No checkpoint next to the ONNX file.'
+                : undefined}
+            buttonProps={{
+                size: 'icon',
+                title: 'Test on a test dataset',
+                disabled: !model.has_checkpoint,
+                onclick: onTest
+            }}
+        />
         <Button
             icon={Rocket}
             ariaLabel={`Train from ${model.name}`}

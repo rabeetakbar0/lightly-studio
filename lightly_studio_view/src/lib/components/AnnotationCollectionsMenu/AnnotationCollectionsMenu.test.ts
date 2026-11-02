@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
     setSelectedCollectionIds: vi.fn(),
-    enforceColoringByClassStore: null as unknown as Writable<boolean>
+    enforceColoringByClassStore: null as unknown as Writable<boolean>,
+    deleteSource: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
@@ -29,6 +30,13 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
         }))
     };
 });
+
+vi.mock('$lib/hooks/useDeleteAnnotationSource/useDeleteAnnotationSource.svelte', () => ({
+    useDeleteAnnotationSource: vi.fn(() => ({
+        mutation: { isPending: false },
+        deleteSource: mocks.deleteSource
+    }))
+}));
 
 vi.mock('$lib/hooks/useSettings', async () => {
     const { writable } = await import('svelte/store');
@@ -57,11 +65,25 @@ describe('AnnotationCollectionsMenu', () => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders nothing when there is only one collection', () => {
+    it('lists a single collection without checkboxes so it can still be deleted', () => {
         mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
         render(AnnotationCollectionsMenu, defaultProps);
-        expect(screen.queryByText('Annotation Sources')).not.toBeInTheDocument();
+        expect(screen.getByText('Annotation Sources')).toBeInTheDocument();
+        expect(screen.getByTestId('single-annotation-source')).toHaveTextContent('Ground Truth');
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(screen.getByTestId('delete-annotation-source')).toBeInTheDocument();
+    });
+
+    it('deletes the chosen source with its unused classes', async () => {
+        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        render(AnnotationCollectionsMenu, defaultProps);
+        await fireEvent.click(screen.getByTestId('delete-annotation-source'));
+        await waitFor(() => expect(screen.getByTestId('delete-source-confirm')).toBeEnabled());
+        expect(screen.getByTestId('delete-source-confirm')).toHaveTextContent(
+            'Delete "Ground Truth"'
+        );
+        await fireEvent.click(screen.getByTestId('delete-source-confirm'));
+        expect(mocks.deleteSource).toHaveBeenCalledWith('c1', true);
     });
 
     it('renders a menu item for each collection when there are two or more', () => {

@@ -100,3 +100,38 @@ def test_training_runs_flow(test_client: TestClient, tmp_path: Path, mocker: Moc
     assert (
         test_client.get("/api/pipeline_training/runs/run1").status_code == HTTP_STATUS_BAD_REQUEST
     )
+
+
+def test_test_runs_flow(test_client: TestClient, tmp_path: Path, mocker: MockerFixture) -> None:
+    runner = helpers.setup_environment(tmp_path=tmp_path, mocker=mocker)
+    helpers.write_dataset(tmp_path, "data1", ["GateArm"])
+    helpers.write_dataset(tmp_path, "test1", ["GateArm"], splits={"test2017": ["s1", "s2"]})
+    helpers.write_model(tmp_path, "m1", ["GateArm"], checkpoint=True)
+
+    assert test_client.get("/api/pipeline_training/test_datasets").json() == [
+        {"name": "test1", "classes": ["GateArm"], "images": 2, "kind": "train"}
+    ]
+
+    response = test_client.post(
+        "/api/pipeline_training/tests", json={"model": "m1", "dataset": "test1", "batch_size": 2}
+    )
+    assert response.status_code == HTTP_STATUS_CREATED, response.text
+    name = response.json()["name"]
+    assert response.json()["kind"] == "test"
+    assert response.json()["model"] == "m1"
+    helpers.wait_until_done(runner, name)
+
+    body = test_client.get(f"/api/pipeline_training/runs/{name}").json()
+    assert body["status"] == "finished"
+    assert body["test_result"]["ap50_95"] == 0.763
+    assert body["test_result"]["per_class_ap"] == {"GateArm": 0.82505, "LedLight": 0.70168}
+    assert body["test_result"]["overlap_images"] is None
+
+    models = test_client.get("/api/pipeline_models").json()
+    assert models[0]["card"]["trained"] is False
+    assert models[0]["card"]["tests"][0]["dataset"] == "test1"
+
+    response = test_client.post(
+        "/api/pipeline_training/tests", json={"model": "m1", "dataset": "data1"}
+    )
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST

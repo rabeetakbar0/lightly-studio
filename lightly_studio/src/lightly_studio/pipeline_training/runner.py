@@ -8,6 +8,7 @@ waits for the process, then exports ONNX into the models folder when asked to.
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import shutil
@@ -15,14 +16,16 @@ import subprocess
 import threading
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from lightly_studio.dataset import env
 from lightly_studio.pipeline_datasets import coco_dataset
-from lightly_studio.pipeline_training import exp_writer, model_catalog, runs
+from lightly_studio.pipeline_datasets.coco_dataset import TEST_SPLIT, TRAIN_SPLIT, VAL_SPLIT
+from lightly_studio.pipeline_training import exp_writer, log_metrics, model_catalog, runs
 from lightly_studio.pipeline_training.config import BASELINE_MODEL, TrainConfig
-from lightly_studio.pipeline_training.model_catalog import ModelCard
+from lightly_studio.pipeline_training.model_catalog import ModelCard, ModelInfo
 from lightly_studio.pipeline_training.runs import RunRecord
 
 logger = logging.getLogger(__name__)
@@ -170,19 +173,113 @@ class TrainingRunner:
             created_at=runs.now(),
             command=command,
         )
+        return self._launch(record=record, run_dir=run_dir, python=environment.python)
+
+    def start_test(self, model: str, dataset: str, batch_size: int, fp16: bool) -> RunRecord:
+        """Evaluates a model's checkpoint on the test split of a dataset.
+
+        Runs YOLOX's tools/eval.py, the same evaluator as during training, in a run folder
+        named after the model and the dataset. The result is written to the model card.
+
+        Raises:
+            ValueError: If the environment is not ready, the model has no checkpoint, the
+                dataset has no test split, the classes differ, or another run is active.
+        """
+        self._reconcile()
+        environment = self.environment()
+        if not environment.ready:
+            raise ValueError(" ".join(environment.problems))
+        assert environment.yolox_dir is not None
+        assert environment.python is not None
+        info = self._model(name=model)
+        if info.checkpoint_path is None:
+            raise ValueError(f"Model '{model}' has no checkpoint in the models folder.")
+        coco_dataset.validate_name(name=dataset)
+        dataset_dir = env.LIGHTLY_STUDIO_DATASETS_DIR / dataset
+        summary = coco_dataset.read_summary(dataset_dir=dataset_dir)
+        if summary is None:
+            raise ValueError(f"Dataset '{dataset}' does not exist.")
+        if TEST_SPLIT not in summary.splits:
+            raise ValueError(f"Dataset '{dataset}' has no test split.")
+        if list(summary.classes) != list(info.classes):
+            raise ValueError(
+                f"Dataset classes {summary.classes} differ from the model's {info.classes}."
+            )
+        active = [
+            r.name for r in runs.list_records(runs_dir=env.LIGHTLY_STUDIO_RUNS_DIR) if r.is_active
+        ]
+        if active:
+            raise ValueError(f"Run '{active[0]}' is still active; one run at a time.")
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        name = f"{model}__test__{dataset}__{stamp}"
+        run_dir = self._run_dir(name=name)
+        if run_dir.exists():
+            raise ValueError(f"Run '{name}' exists already.")
+
+        config = _model_config(info=info)
+        config.batch_size = batch_size
+        config.fp16 = fp16
+        run_dir.mkdir(parents=True)
+        (run_dir / runs.EXP_FILE).write_text(
+            exp_writer.render_eval_exp(
+                config=config,
+                data_dir=dataset_dir,
+                num_classes=len(summary.classes),
+                output_dir=run_dir,
+            ),
+            encoding="utf-8",
+        )
+        command = [
+            environment.python,
+            "-u",
+            str(Path(environment.yolox_dir) / "tools" / "eval.py"),
+            "-f",
+            str(run_dir / runs.EXP_FILE),
+            "-c",
+            str(info.checkpoint_path),
+            "-d",
+            "1",
+            "-b",
+            str(batch_size),
+        ]
+        if fp16:
+            command.append("--fp16")
+        record = RunRecord(
+            name=name,
+            dataset=dataset,
+            classes=list(summary.classes),
+            dataset_info=_dataset_info(summary=summary),
+            config=config.model_dump(),
+            status=runs.STATUS_RUNNING,
+            created_at=runs.now(),
+            command=command,
+            kind=runs.KIND_TEST,
+            model=model,
+        )
+        return self._launch(record=record, run_dir=run_dir, python=environment.python)
+
+    def _launch(self, record: RunRecord, run_dir: Path, python: str) -> RunRecord:
         log = (run_dir / runs.LOG_FILE).open("ab")
         try:
-            process = subprocess.Popen(command, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT)
+            process = subprocess.Popen(
+                record.command, cwd=run_dir, stdout=log, stderr=subprocess.STDOUT
+            )
         finally:
             log.close()
         record.pid = process.pid
         with self._lock:
-            self._processes[name] = process
+            self._processes[record.name] = process
         runs.write_record(run_dir=run_dir, record=record)
         threading.Thread(
-            target=self._supervise, args=(record, process, environment.python), daemon=True
+            target=self._supervise, args=(record, process, python), daemon=True
         ).start()
         return record
+
+    def _model(self, name: str) -> ModelInfo:
+        for info in model_catalog.list_models(models_dir=env.LIGHTLY_STUDIO_MODELS_DIR):
+            if info.name == name:
+                return info
+        raise ValueError(f"Model '{name}' is not in the models folder.")
 
     def stop(self, name: str) -> RunRecord:
         """Terminates the training process; the run ends as 'stopped'.
@@ -226,7 +323,10 @@ class TrainingRunner:
             record.status = runs.STATUS_STOPPED
         elif record.exit_code != 0:
             record.status = runs.STATUS_FAILED
-            record.error = f"Training exited with code {record.exit_code}; see the log."
+            what = "Testing" if record.kind == runs.KIND_TEST else "Training"
+            record.error = f"{what} exited with code {record.exit_code}; see the log."
+        elif record.kind == runs.KIND_TEST:
+            self._record_test(record=record, run_dir=run_dir)
         elif record.config.get("export_onnx"):
             record.status = runs.STATUS_EXPORTING
             runs.write_record(run_dir=run_dir, record=record)
@@ -304,6 +404,35 @@ class TrainingRunner:
             except Exception:
                 logger.exception("Registering the exported model %s failed.", target)
 
+    def _record_test(self, record: RunRecord, run_dir: Path) -> None:
+        """Reads the scores from the log and appends them to the model card."""
+        assert record.model is not None
+        result = log_metrics.parse_eval(text=runs.read_log_tail(run_dir=run_dir, lines=10_000))
+        if result.ap50_95 is None:
+            record.status = runs.STATUS_FAILED
+            record.error = "The evaluation printed no COCO summary; see the log."
+            return
+        models_dir = env.LIGHTLY_STUDIO_MODELS_DIR
+        card = model_catalog.read_card(models_dir=models_dir, name=record.model)
+        if card is None:
+            card = model_catalog.tests_only_card()
+        test_images = int(
+            record.dataset_info.get("splits", {}).get(TEST_SPLIT, {}).get("images", 0)
+        )
+        record.test_result = {
+            "dataset": record.dataset,
+            "images": test_images,
+            "ap50_95": result.ap50_95,
+            "ap50": result.ap50,
+            "per_class_ap": result.per_class_ap,
+            "overlap_images": _training_overlap(card=card, test_dataset=record.dataset),
+            "run_name": record.name,
+            "created_at": record.created_at,
+        }
+        card.tests.append(record.test_result)
+        model_catalog.write_card(models_dir=models_dir, name=record.model, card=card)
+        record.status = runs.STATUS_FINISHED
+
     def _reconcile(self) -> None:
         """Marks runs left active by an earlier backend process as failed, once."""
         with self._lock:
@@ -358,6 +487,47 @@ def _dataset_info(summary: coco_dataset.DatasetSummary) -> dict[str, Any]:
         "annotation_source": summary.annotation_source,
         "sources": list(summary.sources),
     }
+
+
+def _model_config(info: ModelInfo) -> TrainConfig:
+    """The model's training settings, or defaults with its size for a model without a card."""
+    if info.card is not None and info.card.trained:
+        return TrainConfig.model_validate(info.card.config)
+    config = TrainConfig()
+    if info.depth is not None and info.width is not None:
+        config.depth = info.depth
+        config.width = info.width
+    return config
+
+
+def _training_overlap(card: ModelCard, test_dataset: str) -> int | None:
+    """How many test images were in the model's training data; None when unknown.
+
+    Images are matched by Studio sample id, or by file name when an entry has none. The
+    check needs the model's training dataset folder; a model without a recorded dataset,
+    or whose dataset was deleted, gives None.
+    """
+    if not card.trained:
+        return None
+    training_dir = env.LIGHTLY_STUDIO_DATASETS_DIR / str(card.dataset.get("name", ""))
+    if not (training_dir / "annotations").is_dir():
+        return None
+    seen = _image_keys(dataset_dir=training_dir, splits=(TRAIN_SPLIT, VAL_SPLIT))
+    test_keys = _image_keys(
+        dataset_dir=env.LIGHTLY_STUDIO_DATASETS_DIR / test_dataset, splits=(TEST_SPLIT,)
+    )
+    return len(test_keys & seen)
+
+
+def _image_keys(dataset_dir: Path, splits: tuple[str, ...]) -> set[str]:
+    keys: set[str] = set()
+    for split in splits:
+        path = dataset_dir / "annotations" / f"instances_{split}.json"
+        if not path.is_file():
+            continue
+        for image in json.loads(path.read_text(encoding="utf-8")).get("images", []):
+            keys.add(str(image.get("sample_id") or image["file_name"]))
+    return keys
 
 
 def _place_checkpoint(src: Path, dst: Path) -> None:

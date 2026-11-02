@@ -26,3 +26,19 @@ def test_render_exp() -> None:
     assert "self.mosaic_scale = (0.1, 1.5)" in source
     assert "self.basic_lr_per_img = 0.00015625" in source
     assert "max_labels=50" in source
+    assert "name='val2017'" in source
+    assert "json_file='instances_val2017.json'" in source
+
+
+def test_render_eval_exp() -> None:
+    source = exp_writer.render_eval_exp(
+        config=TrainConfig(test_size=512),
+        data_dir=Path("/data/test1"),
+        num_classes=2,
+        output_dir=Path("/runs/t1"),
+    )
+    ast.parse(source)
+    assert "self.data_dir = '/data/test1'" in source
+    assert "self.test_size = (512, 512)" in source
+    assert "name='test2017'" in source
+    assert "json_file='instances_test2017.json'" in source

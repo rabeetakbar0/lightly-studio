@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button, Spinner, Typography } from '$lib/components';
     import ConfirmDeleteDialog from '$lib/components/ConfirmDeleteDialog/ConfirmDeleteDialog.svelte';
-    import { GitMerge, Rocket, X } from '@lucide/svelte';
+    import { FlaskConical, GitMerge, Rocket, X } from '@lucide/svelte';
     import {
         usePipelineDatasetActions,
         usePipelineDatasets
@@ -11,6 +11,7 @@
         useTrainingOptions
     } from '$lib/hooks/usePipelineTraining/usePipelineTraining.svelte';
     import DatasetRow from './DatasetRow.svelte';
+    import BuildTestDatasetDialog from './BuildTestDatasetDialog.svelte';
     import MergeDatasetsDialog from './MergeDatasetsDialog.svelte';
     import RunsSection from './RunsSection.svelte';
     import TrainModelDialog from './TrainModelDialog.svelte';
@@ -21,13 +22,15 @@
     let { onClose }: Props = $props();
 
     const query = usePipelineDatasets();
-    const { mergeMutation, deleteMutation, preview, merge, remove } = usePipelineDatasetActions();
+    const { mergeMutation, buildTestMutation, buildTest, deleteMutation, preview, merge, remove } =
+        usePipelineDatasetActions();
     const options = useTrainingOptions();
     const { startMutation, start } = useTrainingActions();
     const datasets = $derived(query.data ?? []);
     const datasetNames = $derived(datasets.map((d) => d.name));
 
     let mergeOpen = $state(false);
+    let buildTestOpen = $state(false);
     let trainOpen = $state(false);
     let toDelete = $state<string | null>(null);
 
@@ -36,6 +39,9 @@
     });
     $effect(() => {
         if (!startMutation.isPending && startMutation.isSuccess) trainOpen = false;
+    });
+    $effect(() => {
+        if (!buildTestMutation.isPending && buildTestMutation.isSuccess) buildTestOpen = false;
     });
     $effect(() => {
         if (!deleteMutation.isPending && deleteMutation.isSuccess) toDelete = null;
@@ -52,8 +58,9 @@
         />
     </div>
     <p class="mb-3 text-sm text-muted-foreground">
-        Datasets prepared with Export → "Prepare COCO dataset". Preview opens a dataset in Studio in
-        a new tab; merge combines two; "Train model" starts a YOLOX run on one.
+        Datasets prepared with Export → "Prepare COCO dataset". Preview opens a dataset in a new
+        tab; merge combines two; "Build test dataset" draws a test-only dataset from any of them;
+        "Train model" starts a YOLOX run on one.
     </p>
     <div class="mb-3 flex gap-2">
         <Button
@@ -67,6 +74,18 @@
             }}
         >
             Merge datasets
+        </Button>
+        <Button
+            variant="outline"
+            icon={FlaskConical}
+            buttonProps={{
+                size: 'sm',
+                disabled: datasets.length === 0,
+                onclick: () => (buildTestOpen = true),
+                'data-testid': 'build-test-dataset'
+            }}
+        >
+            Build test dataset
         </Button>
         <Button
             variant="outline"
@@ -115,6 +134,14 @@
         isPending={mergeMutation.isPending}
         onConfirm={merge}
         onCancel={() => (mergeOpen = false)}
+    />
+{/if}
+{#if buildTestOpen}
+    <BuildTestDatasetDialog
+        {datasets}
+        isPending={buildTestMutation.isPending}
+        onConfirm={buildTest}
+        onCancel={() => (buildTestOpen = false)}
     />
 {/if}
 {#if trainOpen && options.data}

@@ -24,6 +24,8 @@ STATUS_EXPORTING = "exporting"
 STATUS_FINISHED = "finished"
 STATUS_FAILED = "failed"
 STATUS_STOPPED = "stopped"
+KIND_TRAIN = "train"
+KIND_TEST = "test"
 ACTIVE_STATUSES = (STATUS_RUNNING, STATUS_EXPORTING)
 
 _NAME_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
@@ -47,6 +49,10 @@ class RunRecord:
         error: Why the run failed, when it did.
         command: The train command as launched.
         dataset_info: The dataset summary at the start: counts, splits, annotation source.
+        kind: "train" for a training run, "test" for a model test on a test dataset.
+        model: The tested model, for test runs.
+        test_result: Scores of a finished test run: dataset, images, ap50_95, ap50,
+            per_class_ap, overlap_images.
     """
 
     name: str
@@ -62,6 +68,9 @@ class RunRecord:
     error: str | None = None
     command: list[str] = field(default_factory=list)
     dataset_info: dict[str, Any] = field(default_factory=dict)
+    kind: str = KIND_TRAIN
+    model: str | None = None
+    test_result: dict[str, Any] | None = None
 
     @property
     def is_active(self) -> bool:

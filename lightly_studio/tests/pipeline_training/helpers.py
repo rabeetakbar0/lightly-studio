@@ -32,6 +32,20 @@ time.sleep(float(os.environ.get("STUB_SLEEP_SECONDS", "0")))
 sys.exit(int(os.environ.get("STUB_EXIT_CODE", "0")))
 """
 
+# The stub eval.py prints a COCO summary and a per-class table like the real evaluator.
+_EVAL_STUB = """
+import os, sys
+args = sys.argv[1:]
+print("args:", " ".join(args), flush=True)
+print(" Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.763", flush=True)
+print(" Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.980", flush=True)
+print("per class AP:", flush=True)
+print("| class   | AP     | class    | AP     |", flush=True)
+print("|:--------|:-------|:---------|:-------|", flush=True)
+print("| GateArm | 82.505 | LedLight | 70.168 |", flush=True)
+sys.exit(int(os.environ.get("STUB_EXIT_CODE", "0")))
+"""
+
 _EXPORT_STUB = """
 import sys
 args = sys.argv[1:]
@@ -49,6 +63,7 @@ def setup_environment(tmp_path: Path, mocker: MockerFixture) -> TrainingRunner:
     yolox_dir = tmp_path / "yolox"
     (yolox_dir / "tools").mkdir(parents=True)
     (yolox_dir / "tools" / "train.py").write_text(textwrap.dedent(_TRAIN_STUB))
+    (yolox_dir / "tools" / "eval.py").write_text(textwrap.dedent(_EVAL_STUB))
     export_script = tmp_path / "export_stub.py"
     export_script.write_text(textwrap.dedent(_EXPORT_STUB))
     weights_dir = tmp_path / "weights"
@@ -67,17 +82,45 @@ def setup_environment(tmp_path: Path, mocker: MockerFixture) -> TrainingRunner:
     return runner
 
 
-def write_dataset(tmp_path: Path, name: str, classes: list[str]) -> Path:
-    """Writes just the manifest of a prepared dataset; training only reads that."""
+def write_dataset(
+    tmp_path: Path,
+    name: str,
+    classes: list[str],
+    splits: dict[str, list[str]] | None = None,
+) -> Path:
+    """Writes the manifest of a prepared dataset and, per split, an instances file.
+
+    Args:
+        tmp_path: The test folder; the dataset goes under its datasets/.
+        name: The dataset name.
+        classes: The class names in category order.
+        splits: Split name to the sample ids of its images; default one train split of two.
+    """
+    splits = splits if splits is not None else {"train2017": ["s1", "s2"]}
     dataset_dir = tmp_path / "datasets" / name
-    dataset_dir.mkdir(parents=True)
+    (dataset_dir / "annotations").mkdir(parents=True)
+    for split, sample_ids in splits.items():
+        (dataset_dir / "annotations" / f"instances_{split}.json").write_text(
+            json.dumps(
+                {
+                    "images": [
+                        {"id": i, "file_name": f"{sample_id}.jpg", "sample_id": sample_id}
+                        for i, sample_id in enumerate(sample_ids, start=1)
+                    ],
+                    "annotations": [],
+                    "categories": [{"id": i, "name": c} for i, c in enumerate(classes, start=1)],
+                }
+            )
+        )
     (dataset_dir / "dataset.json").write_text(
         json.dumps(
             {
                 "name": name,
                 "created_at": "2026-10-27T10:00:00+00:00",
                 "classes": classes,
-                "splits": {"train2017": {"images": 2, "boxes": 2}},
+                "splits": {
+                    split: {"images": len(ids), "boxes": 0} for split, ids in splits.items()
+                },
             }
         )
     )

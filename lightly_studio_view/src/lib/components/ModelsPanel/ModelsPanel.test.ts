@@ -5,6 +5,7 @@ import ModelsPanel from './ModelsPanel.svelte';
 
 const mocks = vi.hoisted(() => ({
     start: vi.fn(),
+    startTest: vi.fn(),
     models: [] as unknown[]
 }));
 
@@ -35,9 +36,20 @@ vi.mock('$lib/hooks/usePipelineTraining/usePipelineTraining.svelte', () => ({
             environment: { yolox_dir: '/y', python: 'py', weights: [], problems: [], ready: true }
         }
     }),
+    useTestDatasets: () => ({
+        data: [
+            { name: 't1', classes: ['GateArm', 'LedLight'], images: 50, kind: 'test' },
+            { name: 'other', classes: ['Car'], images: 5, kind: 'train' }
+        ],
+        isLoading: false,
+        isSuccess: true,
+        error: null
+    }),
     useTrainingActions: () => ({
         startMutation: { isPending: false, isSuccess: false },
-        start: mocks.start
+        testMutation: { isPending: false, isSuccess: false },
+        start: mocks.start,
+        startTest: mocks.startTest
     })
 }));
 
@@ -69,7 +81,9 @@ const card = (dataset: string, epochs: number) => ({
     evaluations: [],
     trained_epochs: epochs,
     created_at: '2026-10-27T10:00:00+00:00',
-    finished_at: '2026-10-27T12:00:00+00:00'
+    finished_at: '2026-10-27T12:00:00+00:00',
+    trained: true,
+    tests: [] as object[]
 });
 
 describe('ModelsPanel', () => {
@@ -110,6 +124,39 @@ describe('ModelsPanel', () => {
             ['Result · Epochs trained', '150', '60'],
             ['Schedule · Epochs', '150', '60']
         ]);
+    });
+
+    it('shows the latest test and starts a test on a matching dataset', async () => {
+        const tested = card('data1', 150);
+        tested.tests = [
+            {
+                dataset: 't1',
+                images: 50,
+                ap50_95: 0.763,
+                ap50: 0.98,
+                per_class_ap: { GateArm: 0.8, LedLight: 0.7 },
+                overlap_images: 2,
+                run_name: 'r',
+                created_at: ''
+            }
+        ];
+        mocks.models = [model('v5', tested)];
+        render(ModelsPanel, { props: { onClose: vi.fn() } });
+        expect(
+            screen.getByText('Tested on t1: AP 76.3 · AP50 98.0 · 2 of 50 seen in training')
+        ).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Test v5' }));
+        await waitFor(() => expect(screen.getByTestId('test-confirm')).toBeEnabled());
+        expect(screen.getByTestId('test-dataset')).toHaveTextContent(
+            't1 (50 test images, test set)'
+        );
+        await fireEvent.click(screen.getByTestId('test-confirm'));
+        expect(mocks.startTest).toHaveBeenCalledWith({
+            model: 'v5',
+            dataset: 't1',
+            batch_size: 16,
+            fp16: true
+        });
     });
 
     it('opens the train dialog from a model with its settings as the start', async () => {

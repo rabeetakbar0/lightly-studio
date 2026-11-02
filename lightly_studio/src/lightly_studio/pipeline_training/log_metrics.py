@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 
 _PROGRESS = re.compile(r"epoch: (\d+)/(\d+), iter: (\d+)/(\d+).*?ETA: (\S+)")
 _EPOCH_START = re.compile(r"start train epoch(\d+)")
+_MIN_TABLE_CELLS = 2
 _AP = re.compile(
     r"Average Precision\s+\(AP\) @\[ IoU=(0\.50:0\.95|0\.50)\s+\| area=\s+all "
     r"\| maxDets=100 \] = (-?[\d.]+)"
@@ -20,6 +21,15 @@ class EpochEvaluation:
     epoch: int
     ap50: float | None = None
     ap50_95: float | None = None
+
+
+@dataclass
+class EvalResult:
+    """What one evaluation of a checkpoint produced, scores as fractions."""
+
+    ap50_95: float | None = None
+    ap50: float | None = None
+    per_class_ap: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass
@@ -76,3 +86,37 @@ def parse_log(text: str) -> TrainingProgress:
                 evaluation.ap50_95 = value
     progress.evaluations = [evaluations[epoch] for epoch in sorted(evaluations)]
     return progress
+
+
+def parse_eval(text: str) -> EvalResult:
+    """Parses the output of tools/eval.py: the last COCO summary and the per-class AP table.
+
+    The table is the two-column-pair markdown that YOLOX prints after "per class AP:", with
+    values in percent; they are stored as fractions.
+    """
+    result = EvalResult()
+    lines = text.splitlines()
+    for line in lines:
+        match = _AP.search(line)
+        if not match:
+            continue
+        value = float(match.group(2))
+        if match.group(1) == "0.50":
+            result.ap50 = value
+        else:
+            result.ap50_95 = value
+    table_start = max((i for i, line in enumerate(lines) if "per class AP:" in line), default=-1)
+    if table_start < 0:
+        return result
+    for line in lines[table_start + 1 :]:
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) < _MIN_TABLE_CELLS or not line.strip().startswith("|"):
+            break
+        if cells[0] == "class" or cells[0].startswith(":"):
+            continue
+        for name, cell in zip(cells[0::2], cells[1::2]):
+            try:
+                result.per_class_ap[name] = round(float(cell) / 100.0, 5)
+            except ValueError:
+                continue
+    return result

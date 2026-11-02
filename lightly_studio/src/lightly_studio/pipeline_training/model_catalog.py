@@ -45,6 +45,8 @@ class ModelCard:
         trained_epochs: Epochs the run reached.
         created_at: When the run started.
         finished_at: When the export finished.
+        tests: Results of test runs on test datasets, newest last: dataset, images,
+            ap50_95, ap50, per_class_ap, overlap_images, run_name, created_at.
     """
 
     run_name: str
@@ -56,6 +58,12 @@ class ModelCard:
     trained_epochs: int = 0
     created_at: str = ""
     finished_at: str = ""
+    tests: list[dict[str, Any]] = field(default_factory=list)
+
+    @property
+    def trained(self) -> bool:
+        """True when the card records the training run, not only tests."""
+        return bool(self.run_name)
 
 
 @dataclass
@@ -128,6 +136,11 @@ def write_card(models_dir: Path, name: str, card: ModelCard) -> Path:
     return path
 
 
+def tests_only_card() -> ModelCard:
+    """A card for a model that was trained outside the pipeline, to hold its test results."""
+    return ModelCard(run_name="", dataset={}, baseline=None, config={}, best_ap50_95=None)
+
+
 def read_card(models_dir: Path, name: str) -> ModelCard | None:
     """The model card, or None when the model has no recorded history."""
     path = models_dir / f"{name}{CARD_SUFFIX}"
@@ -144,7 +157,7 @@ def size_from_name(name: str) -> tuple[float, float] | None:
 
 
 def _size_of(name: str, card: ModelCard | None) -> tuple[float | None, float | None]:
-    if card is not None and "depth" in card.config and "width" in card.config:
+    if card is not None and card.trained and "depth" in card.config and "width" in card.config:
         return float(card.config["depth"]), float(card.config["width"])
     size = size_from_name(name=name)
     return size if size is not None else (None, None)

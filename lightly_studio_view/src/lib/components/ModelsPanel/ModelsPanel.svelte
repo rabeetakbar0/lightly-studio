@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { PipelineModelView, TrainConfig } from '$lib/api/lightly_studio_local';
     import { Button, Spinner, Typography } from '$lib/components';
+    import TestModelDialog from '$lib/components/TrainPanel/TestModelDialog.svelte';
     import TrainModelDialog from '$lib/components/TrainPanel/TrainModelDialog.svelte';
     import { Columns3, X } from '@lucide/svelte';
     import { usePipelineDatasets } from '$lib/hooks/usePipelineDatasets/usePipelineDatasets.svelte';
@@ -20,7 +21,7 @@
     const query = usePipelineModels();
     const datasets = usePipelineDatasets();
     const options = useTrainingOptions();
-    const { startMutation, start } = useTrainingActions();
+    const { startMutation, start, testMutation, startTest } = useTrainingActions();
     const models = $derived(query.data ?? []);
     const datasetNames = $derived((datasets.data ?? []).map((d) => d.name));
     const presets = $derived(options.data?.presets ?? {});
@@ -28,6 +29,7 @@
     let selected = $state<string[]>([]);
     let compareOpen = $state(false);
     let trainFrom = $state<PipelineModelView | null>(null);
+    let testOf = $state<PipelineModelView | null>(null);
     const compared = $derived(models.filter((m) => selected.includes(m.name)));
     // The new run starts from the model and repeats its settings when it has a card.
     const initialConfig = $derived.by((): Partial<TrainConfig> | undefined => {
@@ -44,6 +46,9 @@
     };
     $effect(() => {
         if (!startMutation.isPending && startMutation.isSuccess) trainFrom = null;
+    });
+    $effect(() => {
+        if (!testMutation.isPending && testMutation.isSuccess) testOf = null;
     });
 </script>
 
@@ -96,6 +101,7 @@
                         canTrain={datasetNames.length > 0 && !!options.data}
                         onSelect={(on) => toggle(model.name, on)}
                         onTrainFrom={() => (trainFrom = model)}
+                        onTest={() => (testOf = model)}
                     />
                 {/each}
             </ul>
@@ -105,6 +111,15 @@
 
 {#if compareOpen}
     <CompareModelsDialog models={compared} onClose={() => (compareOpen = false)} />
+{/if}
+{#if testOf}
+    <TestModelDialog
+        model={testOf.name}
+        classes={testOf.classes}
+        isPending={testMutation.isPending}
+        onConfirm={startTest}
+        onCancel={() => (testOf = null)}
+    />
 {/if}
 {#if trainFrom && options.data}
     <TrainModelDialog
