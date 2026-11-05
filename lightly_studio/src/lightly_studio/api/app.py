@@ -53,6 +53,7 @@ from lightly_studio.api.routes.api import (
     text_embedding,
     version,
     video,
+    video_tests,
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
@@ -171,6 +172,7 @@ api_router.include_router(media_upload.media_upload_router)
 api_router.include_router(media_delete.media_delete_router)
 api_router.include_router(pipeline_datasets.pipeline_datasets_router)
 api_router.include_router(pipeline_training.pipeline_training_router)
+api_router.include_router(video_tests.video_tests_router)
 api_router.include_router(pipeline_models.pipeline_models_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)

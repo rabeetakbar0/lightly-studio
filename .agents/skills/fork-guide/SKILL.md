@@ -46,6 +46,18 @@ backend and frontend modules.
   venv, Python 3.12) in `lightly_studio/.env`. The backend only launches subprocesses; it never
   imports torch for training. One run at a time. The training process is a child of the
   backend: stopping the backend kills it, and such runs show as failed after a restart.
+- Video tests need `LIGHTLY_STUDIO_TESTAPP_DIR` (the TestApp checkout with
+  `App/test_pipeline.py`) and `LIGHTLY_STUDIO_TESTAPP_PYTHON` (its `.venv/bin/python`,
+  onnxruntime-gpu) in `lightly_studio/.env`; `LIGHTLY_STUDIO_TESTAPP_UPLOADS_DIR` defaults to
+  `<TESTAPP_DIR>/uploads`. A run saves the videos to `uploads/<YYYYmmdd-HHMMSS>/` and starts
+  `python -u App/test_pipeline.py` with `cwd` = TestApp and `GATEARM_MODEL_PATH`,
+  `GATEARM_INPUT_DIR`, `GATEARM_OUTPUT_DIR` set (the TestApp scripts read these, their old
+  hard-coded paths are the defaults). `uploads/results/<name>/` holds the processed videos,
+  `log.txt` and `run.json`. Progress is parsed from the lines the scripts already log
+  (`[i/N] name`, `Progress f/F`, the backup-locations re-run, `Detection summary:`,
+  `Done. Annotated video:`, `Failed to process`), so keep those lines when editing the TestApp.
+  One video test at a time, independent of training. The pipeline also updates
+  `TestApp/Logs/gatearm_locations.json`, as a manual run does.
 - Backend fork modules: `lightly_studio/src/lightly_studio/pipeline_training/` (`config`:
   `TrainConfig` with the v4 recipe as defaults, `baseline` = `model:<name>` | `weights:<file>` |
   null; `model_catalog`: models folder scan, checkpoints, model cards, size presets; `exp_writer`;
@@ -57,7 +69,10 @@ backend and frontend modules.
   Studio as dataset `preview:<name>`) with routes `api/routes/api/pipeline_datasets.py`.
   The landing page skips `preview:` datasets. `lightly_studio/src/lightly_studio/upload/` (frame selection, frame
   extraction, upload and delete services) and routes `api/routes/api/media_upload.py`,
-  `media_delete.py`. `resolvers/image_resolver/delete_many_with_dependents.py` is the ordered
+  `media_delete.py`. `lightly_studio/src/lightly_studio/video_tests/` (`log_progress`: log
+  parser; `runs`: `run.json` records; `runner`: upload, launch, supervise, stop, reconcile) with
+  routes `api/routes/api/video_tests.py` (`/video_tests/options`, `/video_tests`,
+  `/video_tests/{name}`, `/log`, `/stop`). `resolvers/image_resolver/delete_many_with_dependents.py` is the ordered
   DuckDB cascade for image samples.
   `upload/annotation_source_delete.py` removes an annotation source (annotations via
   `annotation_resolver.delete_annotations_by_ids`, evaluation runs incl. class metrics, its tags,
@@ -71,7 +86,10 @@ backend and frontend modules.
   `RunsSection`, `RunRow`, `RunLogDialog` polling active runs; `RunsSection` offers
   `TestModelDialog` when a training finishes; `BuildTestDatasetDialog`), `ModelsPanel` (side panel tab
   "Models": `ModelRow`, `CompareModelsDialog` over `compareRows.ts`, "Train from" opens
-  `TrainModelDialog` with `initialConfig`), `ExportSamples/PrepareDatasetTab`; hooks
+  `TrainModelDialog` with `initialConfig`), `VideoTestPanel` (side panel tab "Video": drop
+  area, model select, `VideoTestRunRow` with progress bar and output paths, `VideoTestLogDialog`;
+  drops on the panel stop propagation so the grid's window-level drop zone ignores them),
+  `ExportSamples/PrepareDatasetTab`; hooks `useVideoTests`,
   `useMediaUpload`, `useDeleteImages`, `useDeleteAllImagesDialog`, `usePipelineDatasets`,
   `usePipelineTraining`, `usePipelineModels`.
 

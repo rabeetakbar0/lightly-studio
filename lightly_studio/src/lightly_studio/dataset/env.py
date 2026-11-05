@@ -38,6 +38,16 @@ LIGHTLY_STUDIO_WEIGHTS_DIR: Path = env.path(
 # installed. Training is off until both are set.
 LIGHTLY_STUDIO_YOLOX_DIR: Optional[Path] = env.path("LIGHTLY_STUDIO_YOLOX_DIR", default=None)
 LIGHTLY_STUDIO_TRAIN_PYTHON: Optional[str] = env.str("LIGHTLY_STUDIO_TRAIN_PYTHON", default=None)
+# The TestApp checkout with App/test_pipeline.py and the interpreter that runs it (Video
+# test panel). Uploaded videos and results go to the uploads folder, <TESTAPP_DIR>/uploads
+# unless set. Video tests are off until the folder and the interpreter are set.
+LIGHTLY_STUDIO_TESTAPP_DIR: Optional[Path] = env.path("LIGHTLY_STUDIO_TESTAPP_DIR", default=None)
+LIGHTLY_STUDIO_TESTAPP_PYTHON: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_TESTAPP_PYTHON", default=None
+)
+LIGHTLY_STUDIO_TESTAPP_UPLOADS_DIR: Optional[Path] = env.path(
+    "LIGHTLY_STUDIO_TESTAPP_UPLOADS_DIR", default=None
+)
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
 LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)

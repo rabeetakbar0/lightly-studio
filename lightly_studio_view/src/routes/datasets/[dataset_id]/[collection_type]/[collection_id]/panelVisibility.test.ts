@@ -36,6 +36,11 @@ describe('isPanelVisible', () => {
         expect(isPanelVisible('distribution', true, false, false)).toBe(false);
     });
 
+    it('video test panel is visible on images route only', () => {
+        expect(isPanelVisible('videotest', true, false, true)).toBe(true);
+        expect(isPanelVisible('videotest', false, false, false)).toBe(false);
+    });
+
     it('train panel is visible on images route only', () => {
         expect(isPanelVisible('train', true, false, true)).toBe(true);
         expect(isPanelVisible('train', false, true, true)).toBe(false);

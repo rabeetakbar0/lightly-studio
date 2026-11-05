@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - "Prepare COCO dataset" takes a validation and a test fraction. Both hold-outs are spread over the whole dataset: images are grouped by visual similarity using their embeddings and every group gives its share, so the splits mirror the data. Missing embeddings are computed first; "tag" still keeps whole recordings in one split.
 - "Build test dataset" in the Train panel draws a spread sample from all images of chosen datasets into a new, test-only dataset.
 - Test a model on a test dataset: offered when a training finishes, and available for any model with a checkpoint from the Models panel. The YOLOX evaluator reports mAP, AP50 and per-class AP, the result is kept in the model's history, shown in the comparison table, and flags test images that were part of the model's training data.
+- The new Video test panel runs the TestApp gate-arm pipeline on recordings: drop one or more videos, pick a model from the models folder and press Run. The videos are saved to `TestApp/uploads/<time>/`, the progress (video, frames, fps) shows while it runs, and each processed video's path in `TestApp/uploads/results/<time>/` is listed with its detection summary when it finishes.
 - Python SDK: `start_gui(allow_empty=True)` starts the GUI on a dataset that has no images yet.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 

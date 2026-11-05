@@ -12,6 +12,7 @@ export function isPanelVisible(
         (activePanel === 'queryEditor' && isImages) ||
         (activePanel === 'distribution' && supportsDistribution) ||
         (activePanel === 'train' && isImages) ||
-        (activePanel === 'models' && isImages)
+        (activePanel === 'models' && isImages) ||
+        (activePanel === 'videotest' && isImages)
     );
 }

@@ -1,6 +1,14 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { Boxes, ChartColumn, ChartNetwork, Dumbbell, Gauge, SearchCode } from '@lucide/svelte';
+    import {
+        Boxes,
+        ChartColumn,
+        ChartNetwork,
+        Clapperboard,
+        Dumbbell,
+        Gauge,
+        SearchCode
+    } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 
@@ -156,6 +164,28 @@
             >
                 <Boxes class="size-4" />
                 <span>Models</span>
+            </button>
+        </Tooltip>
+        <Tooltip
+            content="Run the TestApp pipeline on videos with a model"
+            position="left"
+            triggerClass="w-full"
+            class="w-max"
+        >
+            <button
+                class={cn(
+                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                    $activePanel === 'videotest'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                data-testid="side-panel-tabs-videotest"
+                aria-label="Video test"
+                aria-pressed={$activePanel === 'videotest'}
+                onclick={() => toggle($activePanel, 'videotest')}
+            >
+                <Clapperboard class="size-4" />
+                <span>Video</span>
             </button>
         </Tooltip>
     {/if}
